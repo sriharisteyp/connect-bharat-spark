@@ -1,0 +1,248 @@
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
+export interface Post {
+  id: string;
+  user_id: string;
+  content: string;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+  profile?: {
+    username: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
+  likes_count?: number;
+  comments_count?: number;
+  is_liked?: boolean;
+}
+
+const POSTS_PER_PAGE = 10;
+
+export function useFeedPosts() {
+  const { user } = useAuth();
+
+  return useInfiniteQuery({
+    queryKey: ['posts', 'feed'],
+    queryFn: async ({ pageParam = 0 }) => {
+      // Get posts with profiles
+      const { data: posts, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(pageParam * POSTS_PER_PAGE, (pageParam + 1) * POSTS_PER_PAGE - 1);
+
+      if (error) throw error;
+
+      // Get likes and comments count for each post
+      const postIds = posts.map(p => p.id);
+      const userIds = [...new Set(posts.map(p => p.user_id))];
+      
+      const [likesResult, commentsResult, userLikesResult, profilesResult] = await Promise.all([
+        supabase
+          .from('likes')
+          .select('post_id')
+          .in('post_id', postIds),
+        supabase
+          .from('comments')
+          .select('post_id')
+          .in('post_id', postIds),
+        user ? supabase
+          .from('likes')
+          .select('post_id')
+          .in('post_id', postIds)
+          .eq('user_id', user.id) : Promise.resolve({ data: [] }),
+        supabase
+          .from('profiles')
+          .select('user_id, username, full_name, avatar_url')
+          .in('user_id', userIds),
+      ]);
+
+      const profilesMap = (profilesResult.data || []).reduce((acc, p) => {
+        acc[p.user_id] = p;
+        return acc;
+      }, {} as Record<string, { username: string; full_name: string; avatar_url: string | null }>);
+
+      const likesCount = postIds.reduce((acc, id) => {
+        acc[id] = likesResult.data?.filter(l => l.post_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const commentsCount = postIds.reduce((acc, id) => {
+        acc[id] = commentsResult.data?.filter(c => c.post_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const userLikes = new Set(userLikesResult.data?.map(l => l.post_id) || []);
+
+      return posts.map(post => ({
+        ...post,
+        profile: profilesMap[post.user_id],
+        likes_count: likesCount[post.id] || 0,
+        comments_count: commentsCount[post.id] || 0,
+        is_liked: userLikes.has(post.id),
+      })) as Post[];
+    },
+    getNextPageParam: (lastPage, pages) => {
+      if (lastPage.length < POSTS_PER_PAGE) return undefined;
+      return pages.length;
+    },
+    initialPageParam: 0,
+  });
+}
+
+export function useUserPosts(userId: string) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ['posts', 'user', userId],
+    queryFn: async () => {
+      const { data: posts, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Get profile for this user
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('user_id, username, full_name, avatar_url')
+        .eq('user_id', userId)
+        .single();
+
+      // Get counts
+      const postIds = posts.map(p => p.id);
+      
+      const [likesResult, commentsResult, userLikesResult] = await Promise.all([
+        supabase.from('likes').select('post_id').in('post_id', postIds),
+        supabase.from('comments').select('post_id').in('post_id', postIds),
+        user ? supabase.from('likes').select('post_id').in('post_id', postIds).eq('user_id', user.id) : Promise.resolve({ data: [] }),
+      ]);
+
+      const likesCount = postIds.reduce((acc, id) => {
+        acc[id] = likesResult.data?.filter(l => l.post_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const commentsCount = postIds.reduce((acc, id) => {
+        acc[id] = commentsResult.data?.filter(c => c.post_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const userLikes = new Set(userLikesResult.data?.map(l => l.post_id) || []);
+
+      return posts.map(post => ({
+        ...post,
+        profile: profileData ? { username: profileData.username, full_name: profileData.full_name, avatar_url: profileData.avatar_url } : undefined,
+        likes_count: likesCount[post.id] || 0,
+        comments_count: commentsCount[post.id] || 0,
+        is_liked: userLikes.has(post.id),
+      })) as Post[];
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useCreatePost() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ content, imageUrl }: { content: string; imageUrl?: string }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({
+          user_id: user.id,
+          content,
+          image_url: imageUrl || null,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
+
+export function useDeletePost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
+
+export function useLikePost() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ postId, userId: postUserId }: { postId: string; userId: string }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('likes')
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+        });
+
+      if (error) throw error;
+
+      // Create notification if liking someone else's post
+      if (postUserId !== user.id) {
+        await supabase.from('notifications').insert({
+          user_id: postUserId,
+          actor_id: user.id,
+          type: 'like',
+          post_id: postId,
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
+
+export function useUnlikePost() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+}
