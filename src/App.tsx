@@ -12,7 +12,9 @@ import FeedPage from "@/pages/Feed";
 import SearchPage from "@/pages/Search";
 import NotificationsPage from "@/pages/Notifications";
 import MessagesPage from "@/pages/Messages";
+import ChatPage from "@/pages/Chat";
 import ProfilePage from "@/pages/Profile";
+import UserProfilePage from "@/pages/UserProfile";
 import SettingsPage from "@/pages/Settings";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -53,7 +55,9 @@ const App = () => (
               <Route path="/search" element={<MainLayout><SearchPage /></MainLayout>} />
               <Route path="/notifications" element={<MainLayout><NotificationsPage /></MainLayout>} />
               <Route path="/messages" element={<MainLayout><MessagesPage /></MainLayout>} />
+              <Route path="/messages/:partnerId" element={<MainLayout><ChatPage /></MainLayout>} />
               <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
+              <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
