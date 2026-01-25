@@ -221,3 +221,28 @@ export function useUnreadMessagesCount() {
     enabled: !!user?.id,
   });
 }
+
+export function useMarkMessagesAsRead() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (senderId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('sender_id', senderId)
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, senderId) => {
+      queryClient.invalidateQueries({ queryKey: ['messages', user?.id, senderId] });
+      queryClient.invalidateQueries({ queryKey: ['messages', 'unread', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+    },
+  });
+}

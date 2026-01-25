@@ -44,12 +44,29 @@ export function useProfileByUsername(username: string) {
         .from('profiles')
         .select('*')
         .eq('username', username)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as Profile;
+      return data as Profile | null;
     },
     enabled: !!username,
+  });
+}
+
+export function useProfileByUserId(userId: string) {
+  return useQuery({
+    queryKey: ['profile', 'userId', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Profile | null;
+    },
+    enabled: !!userId,
   });
 }
 
