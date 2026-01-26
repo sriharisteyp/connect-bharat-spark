@@ -1,24 +1,26 @@
-import { Home, Search, Bell, MessageCircle, User } from 'lucide-react';
+import { Home, Search, Bell, MessageCircle, User, Video } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
 import { useUnreadMessagesCount } from '@/hooks/useMessages';
+import { usePendingFriendRequestsCount } from '@/hooks/useFriendRequests';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Search, label: 'Search', path: '/search' },
+  { icon: Video, label: 'Reels', path: '/reels' },
   { icon: Bell, label: 'Alerts', path: '/notifications' },
   { icon: MessageCircle, label: 'Chat', path: '/messages' },
-  { icon: User, label: 'Profile', path: '/profile' },
 ];
 
 export function MobileNav() {
   const location = useLocation();
   const { data: unreadNotifications } = useUnreadNotificationsCount();
   const { data: unreadMessages } = useUnreadMessagesCount();
+  const { data: pendingRequests } = usePendingFriendRequestsCount();
 
   const getBadgeCount = (path: string) => {
-    if (path === '/notifications') return unreadNotifications || 0;
+    if (path === '/notifications') return (unreadNotifications || 0) + (pendingRequests || 0);
     if (path === '/messages') return unreadMessages || 0;
     return 0;
   };

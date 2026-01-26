@@ -6,10 +6,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Loader2, UserPlus, UserMinus, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Loader2, UserPlus, UserMinus, ArrowLeft } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
-
+import { FriendRequestButton } from '@/components/FriendRequestButton';
 export default function UserProfilePage() {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
@@ -101,11 +101,15 @@ export default function UserProfilePage() {
 
             {/* Action Buttons */}
             {!isOwnProfile && (
-              <div className="flex gap-3 mt-4">
+              <div className="flex flex-col gap-3 mt-4">
+                {/* Friend Request Button */}
+                <FriendRequestButton userId={profile.user_id} />
+                
+                {/* Follow Button */}
                 <Button 
                   onClick={handleFollowToggle}
                   disabled={followStatusLoading || followUser.isPending || unfollowUser.isPending}
-                  variant={isFollowing ? 'outline' : 'default'}
+                  variant={isFollowing ? 'outline' : 'secondary'}
                   className="min-w-[120px]"
                 >
                   {followUser.isPending || unfollowUser.isPending ? (
@@ -121,10 +125,6 @@ export default function UserProfilePage() {
                       Follow
                     </>
                   )}
-                </Button>
-                <Button onClick={handleMessage} variant="secondary">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Message
                 </Button>
               </div>
             )}
