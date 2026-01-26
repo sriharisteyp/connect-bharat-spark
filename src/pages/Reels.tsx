@@ -1,0 +1,317 @@
+import { useState, useRef } from 'react';
+import { useReelsFeed, useCreateReel, useUploadReelMedia, useLikeReel, useUnlikeReel, Reel } from '@/hooks/useReels';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+
+function ReelCard({ reel }: { reel: Reel }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const likeReel = useLikeReel();
+  const unlikeReel = useUnlikeReel();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleLike = () => {
+    if (!user) {
+      toast.error('Please login to like reels');
+      return;
+    }
+    if (reel.is_liked) {
+      unlikeReel.mutate(reel.id);
+    } else {
+      likeReel.mutate({ reelId: reel.id, userId: reel.user_id });
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-0">
+        {/* Header */}
+        <div className="flex items-center gap-3 p-3">
+          <Avatar 
+            className="h-10 w-10 cursor-pointer"
+            onClick={() => navigate(`/user/${reel.profile?.username}`)}
+          >
+            <AvatarImage src={reel.profile?.avatar_url || ''} />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {reel.profile?.full_name?.[0] || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p 
+              className="font-semibold truncate cursor-pointer hover:underline"
+              onClick={() => navigate(`/user/${reel.profile?.username}`)}
+            >
+              {reel.profile?.full_name}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}
+            </p>
+          </div>
+        </div>
+
+        {/* Media */}
+        <AspectRatio ratio={9/16} className="bg-black">
+          {reel.media_type === 'video' ? (
+            <div className="relative w-full h-full" onClick={handlePlayPause}>
+              <video
+                ref={videoRef}
+                src={reel.media_url}
+                className="w-full h-full object-cover"
+                loop
+                playsInline
+                poster={reel.thumbnail_url || undefined}
+              />
+              {!isPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Play className="h-16 w-16 text-white" fill="white" />
+                </div>
+              )}
+            </div>
+          ) : (
+            <img 
+              src={reel.media_url} 
+              alt="Reel" 
+              className="w-full h-full object-cover"
+            />
+          )}
+        </AspectRatio>
+
+        {/* Actions */}
+        <div className="p-3 space-y-2">
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2"
+              onClick={handleLike}
+            >
+              <Heart className={cn("h-5 w-5", reel.is_liked && "fill-red-500 text-red-500")} />
+              <span>{reel.likes_count || 0}</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-2">
+              <MessageCircle className="h-5 w-5" />
+              <span>{reel.comments_count || 0}</span>
+            </Button>
+            <Button variant="ghost" size="sm">
+              <Share2 className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {reel.caption && (
+            <p className="text-sm">
+              <span className="font-semibold mr-2">{reel.profile?.username}</span>
+              {reel.caption}
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CreateReelDialog() {
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [caption, setCaption] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadMedia = useUploadReelMedia();
+  const createReel = useCreateReel();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFile(selectedFile);
+      const url = URL.createObjectURL(selectedFile);
+      setPreview(url);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!file) return;
+
+    try {
+      const mediaUrl = await uploadMedia.mutateAsync(file);
+      const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+      
+      await createReel.mutateAsync({
+        mediaUrl,
+        mediaType,
+        caption: caption.trim() || undefined,
+      });
+
+      toast.success('Reel created successfully!');
+      setOpen(false);
+      setFile(null);
+      setPreview(null);
+      setCaption('');
+    } catch (error) {
+      toast.error('Failed to create reel');
+    }
+  };
+
+  const isLoading = uploadMedia.isPending || createReel.isPending;
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Plus className="h-4 w-4" />
+          Create Reel
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create New Reel</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {preview ? (
+            <AspectRatio ratio={9/16} className="bg-muted rounded-lg overflow-hidden">
+              {file?.type.startsWith('video/') ? (
+                <video src={preview} className="w-full h-full object-cover" controls />
+              ) : (
+                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+              )}
+            </AspectRatio>
+          ) : (
+            <div 
+              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex gap-2">
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  <Video className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Click to upload a photo or video
+                </p>
+              </div>
+            </div>
+          )}
+
+          <Textarea
+            placeholder="Write a caption..."
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            rows={3}
+          />
+
+          <div className="flex gap-2">
+            {preview && (
+              <Button 
+                variant="outline" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading}
+              >
+                Change Media
+              </Button>
+            )}
+            <Button 
+              className="flex-1" 
+              onClick={handleSubmit}
+              disabled={!file || isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                'Post Reel'
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function ReelsPage() {
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useReelsFeed();
+
+  const reels = data?.pages.flat() || [];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Reels</h1>
+          <p className="text-muted-foreground">Discover trending videos and photos</p>
+        </div>
+        <CreateReelDialog />
+      </div>
+
+      {/* Reels Grid */}
+      {isLoading ? (
+        <div className="text-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+        </div>
+      ) : reels.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg">No reels yet</h3>
+            <p className="text-muted-foreground">Be the first to share a reel!</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {reels.map((reel) => (
+            <ReelCard key={reel.id} reel={reel} />
+          ))}
+        </div>
+      )}
+
+      {/* Load More */}
+      {hasNextPage && (
+        <div className="text-center">
+          <Button
+            variant="outline"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            Load More
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}

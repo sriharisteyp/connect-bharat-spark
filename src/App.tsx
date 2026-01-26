@@ -12,13 +12,15 @@ import FeedPage from "@/pages/Feed";
 import SearchPage from "@/pages/Search";
 import NotificationsPage from "@/pages/Notifications";
 import MessagesPage from "@/pages/Messages";
+import MessagesDesktopPage from "@/pages/MessagesDesktop";
 import ChatPage from "@/pages/Chat";
 import ProfilePage from "@/pages/Profile";
 import UserProfilePage from "@/pages/UserProfile";
 import SettingsPage from "@/pages/Settings";
+import ReelsPage from "@/pages/Reels";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
-
+import { useIsMobile } from "@/hooks/use-mobile";
 const queryClient = new QueryClient();
 
 // Home route that shows landing for guests, feed for authenticated users
@@ -40,6 +42,17 @@ function HomeRoute() {
   return <MainLayout><FeedPage /></MainLayout>;
 }
 
+// Messages route that shows desktop or mobile layout based on screen size
+function MessagesRoute() {
+  const isMobile = useIsMobile();
+  
+  if (isMobile) {
+    return <MainLayout><MessagesPage /></MainLayout>;
+  }
+  
+  return <MainLayout><MessagesDesktopPage /></MainLayout>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -54,8 +67,9 @@ const App = () => (
               <Route path="/feed" element={<MainLayout><FeedPage /></MainLayout>} />
               <Route path="/search" element={<MainLayout><SearchPage /></MainLayout>} />
               <Route path="/notifications" element={<MainLayout><NotificationsPage /></MainLayout>} />
-              <Route path="/messages" element={<MainLayout><MessagesPage /></MainLayout>} />
+              <Route path="/messages" element={<MessagesRoute />} />
               <Route path="/messages/:partnerId" element={<MainLayout><ChatPage /></MainLayout>} />
+              <Route path="/reels" element={<MainLayout><ReelsPage /></MainLayout>} />
               <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
               <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />
               <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />

@@ -2,9 +2,10 @@ import { useNotifications, useMarkAllNotificationsRead } from '@/hooks/useNotifi
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, UserPlus, Mail, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Mail, Loader2, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { PendingFriendRequests } from '@/components/PendingFriendRequests';
 
 export default function NotificationsPage() {
   const { data: notifications, isLoading } = useNotifications();
@@ -14,8 +15,10 @@ export default function NotificationsPage() {
     switch (type) {
       case 'like': return <Heart className="h-4 w-4 text-accent" />;
       case 'comment': return <MessageCircle className="h-4 w-4 text-primary" />;
-      case 'follow': return <UserPlus className="h-4 w-4 text-success" />;
+      case 'follow': return <UserPlus className="h-4 w-4 text-primary" />;
       case 'message': return <Mail className="h-4 w-4 text-primary" />;
+      case 'friend_request': return <Users className="h-4 w-4 text-primary" />;
+      case 'friend_accepted': return <Users className="h-4 w-4 text-primary" />;
       default: return null;
     }
   };
@@ -26,6 +29,8 @@ export default function NotificationsPage() {
       case 'comment': return `${actorName} commented on your post`;
       case 'follow': return `${actorName} started following you`;
       case 'message': return `${actorName} sent you a message`;
+      case 'friend_request': return `${actorName} sent you a friend request`;
+      case 'friend_accepted': return `${actorName} accepted your friend request`;
       default: return '';
     }
   };
@@ -40,6 +45,9 @@ export default function NotificationsPage() {
           </Button>
         )}
       </div>
+
+      {/* Pending Friend Requests */}
+      <PendingFriendRequests />
 
       {isLoading ? (
         <div className="text-center py-8">

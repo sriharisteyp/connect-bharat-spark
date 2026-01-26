@@ -1,8 +1,9 @@
-import { Home, Search, Bell, MessageCircle, User, Settings, LogOut } from 'lucide-react';
+import { Home, Search, Bell, MessageCircle, User, Settings, LogOut, Video } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnreadNotificationsCount } from '@/hooks/useNotifications';
 import { useUnreadMessagesCount } from '@/hooks/useMessages';
+import { usePendingFriendRequestsCount } from '@/hooks/useFriendRequests';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -16,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 const navItems = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Search, label: 'Search', path: '/search' },
+  { icon: Video, label: 'Reels', path: '/reels' },
   { icon: Bell, label: 'Notifications', path: '/notifications' },
   { icon: MessageCircle, label: 'Messages', path: '/messages' },
 ];
@@ -26,9 +28,10 @@ export function AppSidebar() {
   const { data: profile } = useProfile();
   const { data: unreadNotifications } = useUnreadNotificationsCount();
   const { data: unreadMessages } = useUnreadMessagesCount();
+  const { data: pendingRequests } = usePendingFriendRequestsCount();
 
   const getBadgeCount = (path: string) => {
-    if (path === '/notifications') return unreadNotifications || 0;
+    if (path === '/notifications') return (unreadNotifications || 0) + (pendingRequests || 0);
     if (path === '/messages') return unreadMessages || 0;
     return 0;
   };
