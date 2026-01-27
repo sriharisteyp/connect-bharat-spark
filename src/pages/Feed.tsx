@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Image, Loader2, X } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Heart, MessageCircle, Image, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PostComments } from '@/components/PostComments';
 
 export default function FeedPage() {
   const { user } = useAuth();
@@ -24,8 +26,21 @@ export default function FeedPage() {
   const [content, setContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const posts = postsData?.pages.flat() || [];
+
+  const toggleComments = (postId: string) => {
+    setExpandedComments(prev => {
+      const next = new Set(prev);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+      }
+      return next;
+    });
+  };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,6 +78,10 @@ export default function FeedPage() {
   };
 
   const handleLike = async (postId: string, userId: string, isLiked: boolean) => {
+    if (!user) {
+      toast.error('Please login to like posts');
+      return;
+    }
     try {
       if (isLiked) {
         await unlikePost.mutateAsync(postId);
@@ -143,6 +162,7 @@ export default function FeedPage() {
           </div>
         </CardContent>
       </Card>
+      
       {/* Posts Feed */}
       {isLoading ? (
         <div className="text-center py-8">
@@ -194,14 +214,26 @@ export default function FeedPage() {
                     <Heart className={cn('h-5 w-5', post.is_liked && 'fill-current')} />
                     {post.likes_count || 0}
                   </button>
-                  <Link
-                    to={`/post/${post.id}`}
+                  <button
+                    onClick={() => toggleComments(post.id)}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                   >
                     <MessageCircle className="h-5 w-5" />
                     {post.comments_count || 0}
-                  </Link>
+                    {expandedComments.has(post.id) ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
+                
+                {/* Comments Section */}
+                <Collapsible open={expandedComments.has(post.id)}>
+                  <CollapsibleContent className="mt-4 pt-4 border-t">
+                    <PostComments postId={post.id} postUserId={post.user_id} />
+                  </CollapsibleContent>
+                </Collapsible>
               </CardContent>
             </Card>
           ))}

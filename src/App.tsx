@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import MainLayout from "@/components/layout/MainLayout";
+import ChatLayout from "@/components/layout/ChatLayout";
 import LandingPage from "@/pages/Landing";
 import AuthPage from "@/pages/Auth";
 import FeedPage from "@/pages/Feed";
@@ -68,7 +69,7 @@ const App = () => (
               <Route path="/search" element={<MainLayout><SearchPage /></MainLayout>} />
               <Route path="/notifications" element={<MainLayout><NotificationsPage /></MainLayout>} />
               <Route path="/messages" element={<MessagesRoute />} />
-              <Route path="/messages/:partnerId" element={<MainLayout><ChatPage /></MainLayout>} />
+              <Route path="/messages/:partnerId" element={<ChatLayout><ChatPage /></ChatLayout>} />
               <Route path="/reels" element={<MainLayout><ReelsPage /></MainLayout>} />
               <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
               <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />

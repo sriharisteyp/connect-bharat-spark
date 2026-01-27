@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Sun, Moon, Monitor } from 'lucide-react';
+import { EditProfileForm } from '@/components/EditProfileForm';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -10,6 +11,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      {/* Edit Profile */}
+      <EditProfileForm />
 
       <Card>
         <CardHeader>
