@@ -12,10 +12,17 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { VoiceMessageRecorder } from '@/components/VoiceMessageRecorder';
 import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer';
+import { ChatImageUpload } from '@/components/ChatImageUpload';
 
 // Check if content is a voice message URL
 function isVoiceMessage(content: string): boolean {
   return content.includes('/storage/v1/object/public/posts/') && content.endsWith('.webm');
+}
+
+// Check if content is an image URL
+function isImageMessage(content: string): boolean {
+  return content.includes('/storage/v1/object/public/posts/') && 
+    (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.endsWith('.gif') || content.endsWith('.webp'));
 }
 
 export default function ChatPage() {
@@ -60,6 +67,11 @@ export default function ChatPage() {
     sendMessage.mutate({ receiverId: partnerId, content: audioUrl });
   };
 
+  const handleSendImage = (imageUrl: string) => {
+    if (!partnerId) return;
+    sendMessage.mutate({ receiverId: partnerId, content: imageUrl });
+  };
+
   if (partnerLoading) {
     return (
       <div className="text-center py-8">
@@ -69,7 +81,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-2rem)]">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <Card className="rounded-b-none border-b-0">
         <CardHeader className="py-3">
@@ -107,6 +119,7 @@ export default function ChatPage() {
             messages.map((msg) => {
               const isOwn = msg.sender_id === user?.id;
               const isVoice = isVoiceMessage(msg.content);
+              const isImage = isImageMessage(msg.content);
               
               return (
                 <div
@@ -123,6 +136,13 @@ export default function ChatPage() {
                   >
                     {isVoice ? (
                       <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
+                    ) : isImage ? (
+                      <img 
+                        src={msg.content} 
+                        alt="Shared image" 
+                        className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer"
+                        onClick={() => window.open(msg.content, '_blank')}
+                      />
                     ) : (
                       <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                     )}
@@ -145,6 +165,10 @@ export default function ChatPage() {
       <Card className="rounded-t-none border-t-0">
         <CardContent className="py-3">
           <form onSubmit={handleSend} className="flex gap-2 items-center">
+            <ChatImageUpload 
+              onImageSelected={handleSendImage} 
+              disabled={sendMessage.isPending} 
+            />
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}

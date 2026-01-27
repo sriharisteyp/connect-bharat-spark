@@ -4,16 +4,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { FullscreenReelViewer } from '@/components/FullscreenReelViewer';
+import { ReelComments } from '@/components/ReelComments';
+import { AuthPromptDialog } from '@/components/AuthPromptDialog';
+import { ShareReelDialog } from '@/components/ShareReelDialog';
 
 interface ReelCardProps {
   reel: Reel;
@@ -28,11 +31,14 @@ function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
   const likeReel = useLikeReel();
   const unlikeReel = useUnlikeReel();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleLike = () => {
     if (!user) {
-      toast.error('Please login to like reels');
+      setShowAuthPrompt(true);
       return;
     }
     if (reel.is_liked) {
@@ -40,6 +46,14 @@ function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
     } else {
       likeReel.mutate({ reelId: reel.id, userId: reel.user_id });
     }
+  };
+
+  const handleShare = () => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
+    setShowShareDialog(true);
   };
 
   const handlePlayPause = () => {
@@ -54,100 +68,129 @@ function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden group">
-      <CardContent className="p-0">
-        {/* Header */}
-        <div className="flex items-center gap-3 p-3">
-          <Avatar 
-            className="h-10 w-10 cursor-pointer"
-            onClick={() => navigate(`/user/${reel.profile?.username}`)}
-          >
-            <AvatarImage src={reel.profile?.avatar_url || ''} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {reel.profile?.full_name?.[0] || '?'}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p 
-              className="font-semibold truncate cursor-pointer hover:underline"
+    <>
+      <Card className="overflow-hidden group">
+        <CardContent className="p-0">
+          {/* Header */}
+          <div className="flex items-center gap-3 p-3">
+            <Avatar 
+              className="h-10 w-10 cursor-pointer"
               onClick={() => navigate(`/user/${reel.profile?.username}`)}
             >
-              {reel.profile?.full_name}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => onOpenFullscreen(index)}
-          >
-            <Maximize2 className="h-5 w-5" />
-          </Button>
-        </div>
-
-        {/* Media */}
-        <AspectRatio ratio={9/16} className="bg-black cursor-pointer" onClick={() => onOpenFullscreen(index)}>
-          {reel.media_type === 'video' ? (
-            <div className="relative w-full h-full" onClick={(e) => { e.stopPropagation(); handlePlayPause(); }}>
-              <video
-                ref={videoRef}
-                src={reel.media_url}
-                className="w-full h-full object-cover"
-                loop
-                playsInline
-                muted
-                poster={reel.thumbnail_url || undefined}
-              />
-              {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <Play className="h-16 w-16 text-white" fill="white" />
-                </div>
-              )}
+              <AvatarImage src={reel.profile?.avatar_url || ''} />
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {reel.profile?.full_name?.[0] || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p 
+                className="font-semibold truncate cursor-pointer hover:underline"
+                onClick={() => navigate(`/user/${reel.profile?.username}`)}
+              >
+                {reel.profile?.full_name}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}
+              </p>
             </div>
-          ) : (
-            <img 
-              src={reel.media_url} 
-              alt="Reel" 
-              className="w-full h-full object-cover"
-            />
-          )}
-        </AspectRatio>
-
-        {/* Actions */}
-        <div className="p-3 space-y-2">
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="gap-2"
-              onClick={handleLike}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => onOpenFullscreen(index)}
             >
-              <Heart className={cn("h-5 w-5", reel.is_liked && "fill-red-500 text-red-500")} />
-              <span>{reel.likes_count || 0}</span>
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2">
-              <MessageCircle className="h-5 w-5" />
-              <span>{reel.comments_count || 0}</span>
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Share2 className="h-5 w-5" />
+              <Maximize2 className="h-5 w-5" />
             </Button>
           </div>
 
-          {reel.caption && (
-            <p className="text-sm">
-              <span className="font-semibold mr-2">{reel.profile?.username}</span>
-              {reel.caption}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+          {/* Media */}
+          <AspectRatio ratio={9/16} className="bg-black cursor-pointer" onClick={() => onOpenFullscreen(index)}>
+            {reel.media_type === 'video' ? (
+              <div className="relative w-full h-full" onClick={(e) => { e.stopPropagation(); handlePlayPause(); }}>
+                <video
+                  ref={videoRef}
+                  src={reel.media_url}
+                  className="w-full h-full object-cover"
+                  loop
+                  playsInline
+                  muted
+                  poster={reel.thumbnail_url || undefined}
+                />
+                {!isPlaying && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <Play className="h-16 w-16 text-white" fill="white" />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <img 
+                src={reel.media_url} 
+                alt="Reel" 
+                className="w-full h-full object-cover"
+              />
+            )}
+          </AspectRatio>
+
+          {/* Actions */}
+          <div className="p-3 space-y-2">
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-2"
+                onClick={handleLike}
+              >
+                <Heart className={cn("h-5 w-5", reel.is_liked && "fill-current text-accent")} />
+                <span>{reel.likes_count || 0}</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => setShowComments(!showComments)}
+              >
+                <MessageCircle className="h-5 w-5" />
+                <span>{reel.comments_count || 0}</span>
+                {showComments ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleShare}>
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {reel.caption && (
+              <p className="text-sm">
+                <span className="font-semibold mr-2">{reel.profile?.username}</span>
+                {reel.caption}
+              </p>
+            )}
+
+            {/* Comments Section */}
+            <Collapsible open={showComments}>
+              <CollapsibleContent className="pt-3 border-t mt-3">
+                <ReelComments reelId={reel.id} reelUserId={reel.user_id} />
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        </CardContent>
+      </Card>
+
+      <AuthPromptDialog 
+        open={showAuthPrompt} 
+        onOpenChange={setShowAuthPrompt}
+        title="Sign in to continue"
+        description="Please sign in to like, comment, or share reels."
+      />
+
+      <ShareReelDialog 
+        open={showShareDialog} 
+        onOpenChange={setShowShareDialog}
+        reelId={reel.id}
+      />
+    </>
   );
 }
+
 function CreateReelDialog() {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -277,15 +320,24 @@ function CreateReelDialog() {
 }
 
 export default function ReelsPage() {
+  const { user } = useAuth();
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useReelsFeed();
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const reels = data?.pages.flat() || [];
 
   const openFullscreen = (index: number) => {
     setFullscreenIndex(index);
     setFullscreenOpen(true);
+  };
+
+  const handleCreateClick = () => {
+    if (!user) {
+      setShowAuthPrompt(true);
+      return;
+    }
   };
 
   return (
@@ -296,7 +348,14 @@ export default function ReelsPage() {
           <h1 className="text-2xl font-bold">Reels</h1>
           <p className="text-muted-foreground">Discover trending videos and photos</p>
         </div>
-        <CreateReelDialog />
+        {user ? (
+          <CreateReelDialog />
+        ) : (
+          <Button className="gap-2" onClick={handleCreateClick}>
+            <Plus className="h-4 w-4" />
+            Create Reel
+          </Button>
+        )}
       </div>
 
       {/* Reels Grid */}
@@ -348,6 +407,14 @@ export default function ReelsPage() {
         initialIndex={fullscreenIndex}
         open={fullscreenOpen}
         onOpenChange={setFullscreenOpen}
+      />
+
+      {/* Auth Prompt */}
+      <AuthPromptDialog 
+        open={showAuthPrompt} 
+        onOpenChange={setShowAuthPrompt}
+        title="Sign in to create"
+        description="Please sign in to create and share reels."
       />
     </div>
   );
