@@ -10,6 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Loader2, ArrowLeft, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { VoiceMessageRecorder } from '@/components/VoiceMessageRecorder';
+import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer';
+
+// Check if content is a voice message URL
+function isVoiceMessage(content: string): boolean {
+  return content.includes('/storage/v1/object/public/posts/') && content.endsWith('.webm');
+}
 
 export default function ChatPage() {
   const { partnerId } = useParams<{ partnerId: string }>();
@@ -46,6 +53,11 @@ export default function ChatPage() {
       { receiverId: partnerId, content: message.trim() },
       { onSuccess: () => setMessage('') }
     );
+  };
+
+  const handleSendVoice = (audioUrl: string) => {
+    if (!partnerId) return;
+    sendMessage.mutate({ receiverId: partnerId, content: audioUrl });
   };
 
   if (partnerLoading) {
@@ -94,6 +106,8 @@ export default function ChatPage() {
           ) : (
             messages.map((msg) => {
               const isOwn = msg.sender_id === user?.id;
+              const isVoice = isVoiceMessage(msg.content);
+              
               return (
                 <div
                   key={msg.id}
@@ -107,7 +121,11 @@ export default function ChatPage() {
                         : 'bg-muted rounded-bl-md'
                     )}
                   >
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    {isVoice ? (
+                      <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    )}
                     <p className={cn(
                       'text-xs mt-1',
                       isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
@@ -126,12 +144,16 @@ export default function ChatPage() {
       {/* Message Input */}
       <Card className="rounded-t-none border-t-0">
         <CardContent className="py-3">
-          <form onSubmit={handleSend} className="flex gap-2">
+          <form onSubmit={handleSend} className="flex gap-2 items-center">
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type a message..."
               className="flex-1"
+              disabled={sendMessage.isPending}
+            />
+            <VoiceMessageRecorder 
+              onSend={handleSendVoice} 
               disabled={sendMessage.isPending}
             />
             <Button 

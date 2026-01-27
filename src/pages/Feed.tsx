@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react';
 import { useFeedPosts, useCreatePost, useLikePost, useUnlikePost } from '@/hooks/usePosts';
+import { useUploadPostImage } from '@/hooks/usePostImages';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, MessageCircle, Image, Loader2 } from 'lucide-react';
+import { Heart, MessageCircle, Image, Loader2, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -17,16 +18,44 @@ export default function FeedPage() {
   const { data: profile } = useProfile();
   const { data: postsData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeedPosts();
   const createPost = useCreatePost();
+  const uploadImage = useUploadPostImage();
   const likePost = useLikePost();
   const unlikePost = useUnlikePost();
   const [content, setContent] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const posts = postsData?.pages.flat() || [];
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handlePost = async () => {
-    if (!content.trim()) return;
+    if (!content.trim() && !selectedImage) return;
+    
     try {
-      await createPost.mutateAsync({ content: content.trim() });
+      let imageUrl: string | undefined;
+      
+      if (selectedImage) {
+        imageUrl = await uploadImage.mutateAsync(selectedImage);
+      }
+      
+      await createPost.mutateAsync({ content: content.trim(), imageUrl });
       setContent('');
+      removeImage();
       toast.success('Post created!');
     } catch (error) {
       toast.error('Failed to create post');
@@ -44,6 +73,8 @@ export default function FeedPage() {
       toast.error('Failed to update like');
     }
   };
+
+  const isPosting = createPost.isPending || uploadImage.isPending;
 
   return (
     <div className="space-y-4">
@@ -64,19 +95,54 @@ export default function FeedPage() {
                 placeholder="What's on your mind?"
                 className="resize-none min-h-[80px]"
               />
+              
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="relative inline-block">
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="max-h-48 rounded-lg object-cover"
+                  />
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute top-2 right-2 h-6 w-6"
+                    onClick={removeImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              
               <div className="flex justify-between items-center">
-                <Button variant="ghost" size="icon" disabled>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isPosting}
+                >
                   <Image className="h-5 w-5 text-muted-foreground" />
                 </Button>
-                <Button onClick={handlePost} disabled={!content.trim() || createPost.isPending}>
-                  {createPost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Post'}
+                <Button 
+                  onClick={handlePost} 
+                  disabled={(!content.trim() && !selectedImage) || isPosting}
+                >
+                  {isPosting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Post'}
                 </Button>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-
       {/* Posts Feed */}
       {isLoading ? (
         <div className="text-center py-8">
