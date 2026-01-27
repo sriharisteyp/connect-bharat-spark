@@ -7,14 +7,22 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { FullscreenReelViewer } from '@/components/FullscreenReelViewer';
 
-function ReelCard({ reel }: { reel: Reel }) {
+interface ReelCardProps {
+  reel: Reel;
+  reels: Reel[];
+  index: number;
+  onOpenFullscreen: (index: number) => void;
+}
+
+function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const likeReel = useLikeReel();
@@ -46,7 +54,7 @@ function ReelCard({ reel }: { reel: Reel }) {
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden group">
       <CardContent className="p-0">
         {/* Header */}
         <div className="flex items-center gap-3 p-3">
@@ -70,18 +78,27 @@ function ReelCard({ reel }: { reel: Reel }) {
               {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}
             </p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={() => onOpenFullscreen(index)}
+          >
+            <Maximize2 className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* Media */}
-        <AspectRatio ratio={9/16} className="bg-black">
+        <AspectRatio ratio={9/16} className="bg-black cursor-pointer" onClick={() => onOpenFullscreen(index)}>
           {reel.media_type === 'video' ? (
-            <div className="relative w-full h-full" onClick={handlePlayPause}>
+            <div className="relative w-full h-full" onClick={(e) => { e.stopPropagation(); handlePlayPause(); }}>
               <video
                 ref={videoRef}
                 src={reel.media_url}
                 className="w-full h-full object-cover"
                 loop
                 playsInline
+                muted
                 poster={reel.thumbnail_url || undefined}
               />
               {!isPlaying && (
@@ -131,7 +148,6 @@ function ReelCard({ reel }: { reel: Reel }) {
     </Card>
   );
 }
-
 function CreateReelDialog() {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -262,8 +278,15 @@ function CreateReelDialog() {
 
 export default function ReelsPage() {
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useReelsFeed();
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [fullscreenIndex, setFullscreenIndex] = useState(0);
 
   const reels = data?.pages.flat() || [];
+
+  const openFullscreen = (index: number) => {
+    setFullscreenIndex(index);
+    setFullscreenOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -291,8 +314,14 @@ export default function ReelsPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reels.map((reel) => (
-            <ReelCard key={reel.id} reel={reel} />
+          {reels.map((reel, index) => (
+            <ReelCard 
+              key={reel.id} 
+              reel={reel} 
+              reels={reels}
+              index={index}
+              onOpenFullscreen={openFullscreen}
+            />
           ))}
         </div>
       )}
@@ -312,6 +341,14 @@ export default function ReelsPage() {
           </Button>
         </div>
       )}
+
+      {/* Fullscreen Viewer */}
+      <FullscreenReelViewer
+        reels={reels}
+        initialIndex={fullscreenIndex}
+        open={fullscreenOpen}
+        onOpenChange={setFullscreenOpen}
+      />
     </div>
   );
 }
