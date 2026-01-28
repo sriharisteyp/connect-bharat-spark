@@ -22,7 +22,17 @@ import ReelsPage from "@/pages/Reels";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTrackPresence } from "@/hooks/usePresence";
+import { useInAppNotifications } from "@/hooks/usePushNotifications";
+
 const queryClient = new QueryClient();
+
+// Component to track presence and enable in-app notifications
+function AppInitializer({ children }: { children: React.ReactNode }) {
+  useTrackPresence();
+  useInAppNotifications();
+  return <>{children}</>;
+}
 
 // Home route that shows landing for guests, feed for authenticated users
 function HomeRoute() {
@@ -61,22 +71,24 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<HomeRoute />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/feed" element={<MainLayout><FeedPage /></MainLayout>} />
-              <Route path="/search" element={<MainLayout><SearchPage /></MainLayout>} />
-              <Route path="/notifications" element={<MainLayout><NotificationsPage /></MainLayout>} />
-              <Route path="/messages" element={<MessagesRoute />} />
-              <Route path="/messages/:partnerId" element={<ChatLayout><ChatPage /></ChatLayout>} />
-              <Route path="/reels" element={<MainLayout><ReelsPage /></MainLayout>} />
-              <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
-              <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />
-              <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <AppInitializer>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<HomeRoute />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/feed" element={<MainLayout><FeedPage /></MainLayout>} />
+                <Route path="/search" element={<MainLayout><SearchPage /></MainLayout>} />
+                <Route path="/notifications" element={<MainLayout><NotificationsPage /></MainLayout>} />
+                <Route path="/messages" element={<MessagesRoute />} />
+                <Route path="/messages/:partnerId" element={<ChatLayout><ChatPage /></ChatLayout>} />
+                <Route path="/reels" element={<MainLayout><ReelsPage /></MainLayout>} />
+                <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
+                <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />
+                <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </AppInitializer>
         </TooltipProvider>
       </AuthProvider>
     </ThemeProvider>

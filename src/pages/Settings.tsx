@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { EditProfileForm } from '@/components/EditProfileForm';
+import { NotificationSettings } from '@/components/NotificationSettings';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -14,6 +15,9 @@ export default function SettingsPage() {
 
       {/* Edit Profile */}
       <EditProfileForm />
+
+      {/* Push Notifications */}
+      <NotificationSettings />
 
       <Card>
         <CardHeader>

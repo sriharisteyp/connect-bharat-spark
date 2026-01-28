@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useFeedPosts, useCreatePost, useLikePost, useUnlikePost } from '@/hooks/usePosts';
+import { useFeedPosts, useCreatePost, useLikePost, useUnlikePost, useDeletePost } from '@/hooks/usePosts';
 import { useUploadPostImage } from '@/hooks/usePostImages';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,18 +8,27 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Heart, MessageCircle, Image, Loader2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, MessageCircle, Image, Loader2, X, ChevronDown, ChevronUp, MoreVertical, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { PostComments } from '@/components/PostComments';
+import { Stories } from '@/components/Stories';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function FeedPage() {
   const { user } = useAuth();
   const { data: profile } = useProfile();
   const { data: postsData, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useFeedPosts();
   const createPost = useCreatePost();
+  const deletePost = useDeletePost();
   const uploadImage = useUploadPostImage();
   const likePost = useLikePost();
   const unlikePost = useUnlikePost();
@@ -29,6 +38,15 @@ export default function FeedPage() {
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const posts = postsData?.pages.flat() || [];
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await deletePost.mutateAsync(postId);
+      toast.success('Post deleted');
+    } catch (error) {
+      toast.error('Failed to delete post');
+    }
+  };
 
   const toggleComments = (postId: string) => {
     setExpandedComments(prev => {
@@ -97,6 +115,11 @@ export default function FeedPage() {
 
   return (
     <div className="space-y-4">
+      {/* Stories */}
+      <Card>
+        <Stories />
+      </Card>
+
       {/* Create Post */}
       <Card>
         <CardContent className="pt-4">
@@ -188,7 +211,7 @@ export default function FeedPage() {
                       </AvatarFallback>
                     </Avatar>
                   </Link>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <Link to={`/user/${post.profile?.username}`} className="font-semibold hover:underline">
                       {post.profile?.full_name}
                     </Link>
@@ -196,6 +219,30 @@ export default function FeedPage() {
                       @{post.profile?.username} · {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                     </p>
                   </div>
+                  {/* Delete option for own posts */}
+                  {user && post.user_id === user.id && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DeleteConfirmDialog
+                          title="Delete Post"
+                          description="Are you sure you want to delete this post? This action cannot be undone."
+                          onConfirm={() => handleDeletePost(post.id)}
+                          isPending={deletePost.isPending}
+                          trigger={
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          }
+                        />
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>

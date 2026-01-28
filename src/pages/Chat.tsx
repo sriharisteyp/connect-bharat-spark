@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useConversationMessages, useSendMessage, useMarkMessagesAsRead } from '@/hooks/useMessages';
 import { useProfileByUserId } from '@/hooks/useProfile';
@@ -13,6 +13,9 @@ import { cn } from '@/lib/utils';
 import { VoiceMessageRecorder } from '@/components/VoiceMessageRecorder';
 import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer';
 import { ChatImageUpload } from '@/components/ChatImageUpload';
+import { TypingIndicator } from '@/components/TypingIndicator';
+import { OnlineStatus, AvatarOnlineIndicator } from '@/components/OnlineStatus';
+import { useTypingIndicator, useTypingSubscription } from '@/hooks/usePresence';
 
 // Check if content is a voice message URL
 function isVoiceMessage(content: string): boolean {
@@ -36,6 +39,29 @@ export default function ChatPage() {
   const { data: messages, isLoading: messagesLoading } = useConversationMessages(partnerId || '');
   const sendMessage = useSendMessage();
   const markAsRead = useMarkMessagesAsRead();
+  
+  // Typing indicators
+  const { setTyping } = useTypingIndicator(partnerId || '');
+  const isPartnerTyping = useTypingSubscription(partnerId || '');
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle typing state
+  const handleInputChange = useCallback((value: string) => {
+    setMessage(value);
+    
+    // Set typing to true
+    setTyping(true);
+    
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set typing to false after 2 seconds of no typing
+    typingTimeoutRef.current = setTimeout(() => {
+      setTyping(false);
+    }, 2000);
+  }, [setTyping]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -55,6 +81,12 @@ export default function ChatPage() {
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !partnerId) return;
+
+    // Stop typing indicator
+    setTyping(false);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
 
     sendMessage.mutate(
       { receiverId: partnerId, content: message.trim() },
@@ -89,15 +121,18 @@ export default function ChatPage() {
             <Button variant="ghost" size="icon" onClick={() => navigate('/messages')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={partner?.avatar_url || ''} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {partner?.full_name?.[0] || '?'}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={partner?.avatar_url || ''} />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {partner?.full_name?.[0] || '?'}
+                </AvatarFallback>
+              </Avatar>
+              {partnerId && <AvatarOnlineIndicator userId={partnerId} />}
+            </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">{partner?.full_name || 'Unknown User'}</p>
-              <p className="text-sm text-muted-foreground truncate">@{partner?.username}</p>
+              {partnerId && <OnlineStatus userId={partnerId} showText />}
             </div>
           </div>
         </CardHeader>
@@ -157,6 +192,16 @@ export default function ChatPage() {
               );
             })
           )}
+          
+          {/* Typing indicator */}
+          {isPartnerTyping && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                <TypingIndicator isTyping={true} />
+              </div>
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </CardContent>
       </Card>
@@ -171,7 +216,7 @@ export default function ChatPage() {
             />
             <Input
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => handleInputChange(e.target.value)}
               placeholder="Type a message..."
               className="flex-1"
               disabled={sendMessage.isPending}
