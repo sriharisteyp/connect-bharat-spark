@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useReelsFeed, useCreateReel, useUploadReelMedia, useLikeReel, useUnlikeReel, Reel } from '@/hooks/useReels';
+import { useReelsFeed, useCreateReel, useUploadReelMedia, useLikeReel, useUnlikeReel, useDeleteReel, Reel } from '@/hooks/useReels';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2, ChevronDown, ChevronUp, MoreVertical, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -17,6 +17,13 @@ import { FullscreenReelViewer } from '@/components/FullscreenReelViewer';
 import { ReelComments } from '@/components/ReelComments';
 import { AuthPromptDialog } from '@/components/AuthPromptDialog';
 import { ShareReelDialog } from '@/components/ShareReelDialog';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ReelCardProps {
   reel: Reel;
@@ -25,16 +32,28 @@ interface ReelCardProps {
   onOpenFullscreen: (index: number) => void;
 }
 
-function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
+function ReelCard({ reel, reels, index, onOpenFullscreen, onDelete }: ReelCardProps & { onDelete?: (id: string) => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const likeReel = useLikeReel();
   const unlikeReel = useUnlikeReel();
+  const deleteReel = useDeleteReel();
   const [isPlaying, setIsPlaying] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  
+  const isOwnReel = user?.id === reel.user_id;
+
+  const handleDelete = async () => {
+    try {
+      await deleteReel.mutateAsync(reel.id);
+      toast.success('Reel deleted');
+    } catch (error) {
+      toast.error('Failed to delete reel');
+    }
+  };
 
   const handleLike = () => {
     if (!user) {
@@ -93,14 +112,41 @@ function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
                 {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => onOpenFullscreen(index)}
-            >
-              <Maximize2 className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => onOpenFullscreen(index)}
+              >
+                <Maximize2 className="h-5 w-5" />
+              </Button>
+              
+              {/* Delete option for own reels */}
+              {isOwnReel && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DeleteConfirmDialog
+                      title="Delete Reel"
+                      description="Are you sure you want to delete this reel? This action cannot be undone."
+                      onConfirm={handleDelete}
+                      isPending={deleteReel.isPending}
+                      trigger={
+                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      }
+                    />
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
           </div>
 
           {/* Media */}

@@ -8,8 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, ArrowLeft, Loader2, Users, Shield, Zap } from 'lucide-react';
+import { Globe, ArrowLeft, Loader2, Users, Shield, Zap, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { validateEmailForSignup } from '@/utils/tempMailBlocker';
+import { supabase } from '@/integrations/supabase/client';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -102,6 +105,13 @@ export default function AuthPage() {
     const password = formData.get('password') as string;
     const fullName = formData.get('fullName') as string;
     const username = formData.get('username') as string;
+
+    // Check for temporary email
+    const emailValidation = validateEmailForSignup(email);
+    if (!emailValidation.valid) {
+      toast.error(emailValidation.error);
+      return;
+    }
 
     try {
       signupSchema.parse({ email, password, fullName, username });
