@@ -114,9 +114,9 @@ export default function FeedPage() {
   const isPosting = createPost.isPending || uploadImage.isPending;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-4">
       {/* Stories */}
-      <Card>
+      <Card className="overflow-hidden">
         <Stories />
       </Card>
 
@@ -124,13 +124,13 @@ export default function FeedPage() {
       <Card>
         <CardContent className="pt-4">
           <div className="flex gap-3">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-10 w-10 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || ''} />
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {profile?.full_name?.[0] || user?.email?.[0]?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-3 min-w-0">
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
@@ -165,18 +165,20 @@ export default function FeedPage() {
                 className="hidden"
               />
               
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center gap-2">
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isPosting}
+                  className="flex-shrink-0"
                 >
                   <Image className="h-5 w-5 text-muted-foreground" />
                 </Button>
                 <Button 
                   onClick={handlePost} 
                   disabled={(!content.trim() && !selectedImage) || isPosting}
+                  className="flex-shrink-0"
                 >
                   {isPosting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Post'}
                 </Button>

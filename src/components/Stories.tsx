@@ -88,14 +88,14 @@ function AddStoryButton() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button className="flex flex-col items-center gap-1 min-w-[72px]">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30">
+        <button className="flex flex-col items-center gap-1 min-w-[72px] flex-shrink-0">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors">
             <Plus className="w-6 h-6 text-muted-foreground" />
           </div>
           <span className="text-xs">Add story</span>
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Story</DialogTitle>
         </DialogHeader>
@@ -109,7 +109,7 @@ function AddStoryButton() {
           />
 
           {preview ? (
-            <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden">
+            <div className="relative aspect-[9/16] max-h-[50vh] bg-black rounded-lg overflow-hidden">
               {file?.type.startsWith('video/') ? (
                 <video src={preview} className="w-full h-full object-contain" controls />
               ) : (
@@ -129,7 +129,7 @@ function AddStoryButton() {
             </div>
           ) : (
             <div
-              className="aspect-[9/16] border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
+              className="aspect-[9/16] max-h-[50vh] border-2 border-dashed border-muted-foreground/25 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
               onClick={() => fileInputRef.current?.click()}
             >
               <div className="text-center">
@@ -416,8 +416,8 @@ export function Stories() {
 
   return (
     <>
-      <ScrollArea className="w-full">
-        <div className="flex gap-4 p-4">
+      <ScrollArea className="w-full whitespace-nowrap">
+        <div className="flex gap-3 p-4">
           {user && <AddStoryButton />}
           
           {storyGroups?.map((group, index) => (

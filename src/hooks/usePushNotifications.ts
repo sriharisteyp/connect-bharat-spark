@@ -170,6 +170,28 @@ export function usePushNotifications() {
 export function useInAppNotifications() {
   const { user } = useAuth();
 
+  // Auto-request notification permission on first load
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Check if we've already asked
+    const hasAsked = localStorage.getItem('notification_permission_asked');
+    
+    if (!hasAsked && 'Notification' in window && Notification.permission === 'default') {
+      // Wait a bit before asking to not be too intrusive
+      const timer = setTimeout(() => {
+        Notification.requestPermission().then((permission) => {
+          localStorage.setItem('notification_permission_asked', 'true');
+          if (permission === 'granted') {
+            toast.success('Notifications enabled! You\'ll get alerts for new messages.');
+          }
+        });
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (!user?.id) return;
 

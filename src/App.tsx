@@ -18,6 +18,7 @@ import ChatPage from "@/pages/Chat";
 import ProfilePage from "@/pages/Profile";
 import UserProfilePage from "@/pages/UserProfile";
 import SettingsPage from "@/pages/Settings";
+import AboutPage from "@/pages/About";
 import ReelsPage from "@/pages/Reels";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -85,6 +86,7 @@ const App = () => (
                 <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
                 <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />
                 <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />
+                <Route path="/about" element={<MainLayout><AboutPage /></MainLayout>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
