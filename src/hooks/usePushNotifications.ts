@@ -169,10 +169,11 @@ export function usePushNotifications() {
 // Hook for in-app toast notifications that slide in
 export function useInAppNotifications() {
   const { user } = useAuth();
+  const userId = user?.id;
 
   // Auto-request notification permission on first load
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     // Check if we've already asked
     const hasAsked = localStorage.getItem('notification_permission_asked');
@@ -190,10 +191,12 @@ export function useInAppNotifications() {
 
       return () => clearTimeout(timer);
     }
-  }, [user?.id]);
+    return undefined;
+  }, [userId]);
 
+  // Subscribe to in-app message notifications
   useEffect(() => {
-    if (!user?.id) return;
+    if (!userId) return;
 
     const channel = supabase
       .channel('in-app-notifications')
@@ -203,7 +206,7 @@ export function useInAppNotifications() {
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `receiver_id=eq.${user.id}`,
+          filter: `receiver_id=eq.${userId}`,
         },
         async (payload) => {
           const message = payload.new as {
@@ -240,5 +243,5 @@ export function useInAppNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [userId]);
 }
