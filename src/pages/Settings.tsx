@@ -55,9 +55,12 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>About</CardTitle>
         </CardHeader>
-        <CardContent className="text-muted-foreground">
+        <CardContent className="text-muted-foreground space-y-2">
           <p>DesiConnect v1.0</p>
-          <p className="mt-2">A social network made for India 🇮🇳</p>
+          <p>A social network made for India 🇮🇳</p>
+          <a href="/about" className="text-primary hover:underline block mt-2">
+            Learn more about the developer →
+          </a>
         </CardContent>
       </Card>
     </div>

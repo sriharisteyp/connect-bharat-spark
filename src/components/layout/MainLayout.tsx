@@ -32,7 +32,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <main className="md:ml-16 lg:ml-20 pb-20 md:pb-0">
+      <main className="md:ml-16 lg:ml-20 pb-20 md:pb-0 min-h-screen overflow-y-auto">
         <div className="max-w-2xl mx-auto p-4 lg:p-6">
           {children}
         </div>
