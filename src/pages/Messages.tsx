@@ -1,19 +1,21 @@
 import { useConversations } from '@/hooks/useMessages';
 import { useFriends } from '@/hooks/useFriends';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Loader2, Users, MessageCircle } from 'lucide-react';
+import { Users, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { OnlineStatus, AvatarOnlineIndicator } from '@/components/OnlineStatus';
+import { ConversationSkeleton } from '@/components/ui/skeleton-loaders';
 
 export default function MessagesPage() {
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
   const { data: friends, isLoading: friendsLoading } = useFriends();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4">
       <h1 className="text-2xl font-bold">Messages</h1>
 
       <Tabs defaultValue="chats" className="w-full">
@@ -31,9 +33,7 @@ export default function MessagesPage() {
         {/* Chats Tab */}
         <TabsContent value="chats" className="mt-4">
           {conversationsLoading ? (
-            <div className="text-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
-            </div>
+            <ConversationSkeleton />
           ) : !conversations || conversations.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -48,12 +48,15 @@ export default function MessagesPage() {
                 <Link key={conversation.user_id} to={`/messages/${conversation.user_id}`}>
                   <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
                     <CardContent className="py-3 flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={conversation.avatar_url || ''} />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {conversation.full_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar>
+                          <AvatarImage src={conversation.avatar_url || ''} />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {conversation.full_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <AvatarOnlineIndicator userId={conversation.user_id} />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="font-semibold">{conversation.full_name}</p>
@@ -81,9 +84,7 @@ export default function MessagesPage() {
         {/* Friends Tab */}
         <TabsContent value="friends" className="mt-4">
           {friendsLoading ? (
-            <div className="text-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
-            </div>
+            <ConversationSkeleton />
           ) : !friends || friends.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
@@ -98,15 +99,18 @@ export default function MessagesPage() {
                 <Link key={friend.user_id} to={`/messages/${friend.user_id}`}>
                   <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
                     <CardContent className="py-3 flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={friend.avatar_url || ''} />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {friend.full_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
+                      <div className="relative">
+                        <Avatar>
+                          <AvatarImage src={friend.avatar_url || ''} />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {friend.full_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <AvatarOnlineIndicator userId={friend.user_id} />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold truncate">{friend.full_name}</p>
-                        <p className="text-sm text-muted-foreground truncate">@{friend.username}</p>
+                        <OnlineStatus userId={friend.user_id} showText size="sm" />
                       </div>
                       <MessageCircle className="h-5 w-5 text-muted-foreground" />
                     </CardContent>

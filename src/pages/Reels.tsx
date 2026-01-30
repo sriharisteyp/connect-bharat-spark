@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react';
-import { useReelsFeed, useCreateReel, useUploadReelMedia, useLikeReel, useUnlikeReel, useDeleteReel, Reel } from '@/hooks/useReels';
+import { useState, useRef, useEffect } from 'react';
+import { useReelsFeed, useFollowingReels, useCreateReel, useUploadReelMedia, useLikeReel, useUnlikeReel, useDeleteReel, Reel } from '@/hooks/useReels';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2, ChevronDown, ChevronUp, MoreVertical, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2, ChevronDown, ChevronUp, MoreVertical, Trash2, Flame, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +19,7 @@ import { ReelComments } from '@/components/ReelComments';
 import { AuthPromptDialog } from '@/components/AuthPromptDialog';
 import { ShareReelDialog } from '@/components/ShareReelDialog';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import { ReelGridSkeleton } from '@/components/ui/skeleton-loaders';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +34,7 @@ interface ReelCardProps {
   onOpenFullscreen: (index: number) => void;
 }
 
-function ReelCard({ reel, reels, index, onOpenFullscreen, onDelete }: ReelCardProps & { onDelete?: (id: string) => void }) {
+function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const likeReel = useLikeReel();
@@ -90,7 +92,6 @@ function ReelCard({ reel, reels, index, onOpenFullscreen, onDelete }: ReelCardPr
     <>
       <Card className="overflow-hidden group">
         <CardContent className="p-0">
-          {/* Header */}
           <div className="flex items-center gap-3 p-3">
             <Avatar 
               className="h-10 w-10 cursor-pointer"
@@ -122,7 +123,6 @@ function ReelCard({ reel, reels, index, onOpenFullscreen, onDelete }: ReelCardPr
                 <Maximize2 className="h-5 w-5" />
               </Button>
               
-              {/* Delete option for own reels */}
               {isOwnReel && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -149,7 +149,6 @@ function ReelCard({ reel, reels, index, onOpenFullscreen, onDelete }: ReelCardPr
             </div>
           </div>
 
-          {/* Media */}
           <AspectRatio ratio={9/16} className="bg-black cursor-pointer" onClick={() => onOpenFullscreen(index)}>
             {reel.media_type === 'video' ? (
               <div className="relative w-full h-full" onClick={(e) => { e.stopPropagation(); handlePlayPause(); }}>
@@ -177,7 +176,6 @@ function ReelCard({ reel, reels, index, onOpenFullscreen, onDelete }: ReelCardPr
             )}
           </AspectRatio>
 
-          {/* Actions */}
           <div className="p-3 space-y-2">
             <div className="flex items-center gap-4">
               <Button 
@@ -211,7 +209,6 @@ function ReelCard({ reel, reels, index, onOpenFullscreen, onDelete }: ReelCardPr
               </p>
             )}
 
-            {/* Comments Section */}
             <Collapsible open={showComments}>
               <CollapsibleContent className="pt-3 border-t mt-3">
                 <ReelComments reelId={reel.id} reelUserId={reel.user_id} />
@@ -289,7 +286,7 @@ function CreateReelDialog() {
           Create Reel
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Reel</DialogTitle>
         </DialogHeader>
@@ -367,12 +364,16 @@ function CreateReelDialog() {
 
 export default function ReelsPage() {
   const { user } = useAuth();
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useReelsFeed();
+  const [activeTab, setActiveTab] = useState<'trending' | 'following'>('trending');
+  const { data: trendingData, isLoading: trendingLoading, fetchNextPage: fetchTrendingNext, hasNextPage: hasTrendingNext, isFetchingNextPage: isFetchingTrending } = useReelsFeed();
+  const { data: followingData, isLoading: followingLoading, fetchNextPage: fetchFollowingNext, hasNextPage: hasFollowingNext, isFetchingNextPage: isFetchingFollowing } = useFollowingReels();
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [fullscreenIndex, setFullscreenIndex] = useState(0);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
-  const reels = data?.pages.flat() || [];
+  const trendingReels = trendingData?.pages.flat() || [];
+  const followingReels = followingData?.pages.flat() || [];
+  const currentReels = activeTab === 'trending' ? trendingReels : followingReels;
 
   const openFullscreen = (index: number) => {
     setFullscreenIndex(index);
@@ -387,7 +388,7 @@ export default function ReelsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -404,52 +405,110 @@ export default function ReelsPage() {
         )}
       </div>
 
-      {/* Reels Grid */}
-      {isLoading ? (
-        <div className="text-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-        </div>
-      ) : reels.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg">No reels yet</h3>
-            <p className="text-muted-foreground">Be the first to share a reel!</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reels.map((reel, index) => (
-            <ReelCard 
-              key={reel.id} 
-              reel={reel} 
-              reels={reels}
-              index={index}
-              onOpenFullscreen={openFullscreen}
-            />
-          ))}
-        </div>
-      )}
+      {/* Feed Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'trending' | 'following')}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="trending" className="gap-2">
+            <Flame className="h-4 w-4" />
+            Trending
+          </TabsTrigger>
+          <TabsTrigger value="following" className="gap-2">
+            <Users className="h-4 w-4" />
+            Following
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Load More */}
-      {hasNextPage && (
-        <div className="text-center">
-          <Button
-            variant="outline"
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-          >
-            {isFetchingNextPage ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
-            Load More
-          </Button>
-        </div>
-      )}
+        <TabsContent value="trending" className="mt-4">
+          {trendingLoading ? (
+            <ReelGridSkeleton />
+          ) : trendingReels.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Video className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg">No reels yet</h3>
+                <p className="text-muted-foreground">Be the first to share a reel!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trendingReels.map((reel, index) => (
+                  <ReelCard 
+                    key={reel.id} 
+                    reel={reel} 
+                    reels={trendingReels}
+                    index={index}
+                    onOpenFullscreen={openFullscreen}
+                  />
+                ))}
+              </div>
+              {hasTrendingNext && (
+                <div className="text-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchTrendingNext()}
+                    disabled={isFetchingTrending}
+                  >
+                    {isFetchingTrending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Load More
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="following" className="mt-4">
+          {!user ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg">Sign in to see reels from people you follow</h3>
+              </CardContent>
+            </Card>
+          ) : followingLoading ? (
+            <ReelGridSkeleton />
+          ) : followingReels.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg">No reels from people you follow</h3>
+                <p className="text-muted-foreground">Start following people to see their reels here!</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {followingReels.map((reel, index) => (
+                  <ReelCard 
+                    key={reel.id} 
+                    reel={reel} 
+                    reels={followingReels}
+                    index={index}
+                    onOpenFullscreen={openFullscreen}
+                  />
+                ))}
+              </div>
+              {hasFollowingNext && (
+                <div className="text-center mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchFollowingNext()}
+                    disabled={isFetchingFollowing}
+                  >
+                    {isFetchingFollowing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Load More
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Fullscreen Viewer */}
       <FullscreenReelViewer
-        reels={reels}
+        reels={currentReels}
         initialIndex={fullscreenIndex}
         open={fullscreenOpen}
         onOpenChange={setFullscreenOpen}

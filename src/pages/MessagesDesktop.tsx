@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAcceptedFriends } from '@/hooks/useFriendRequests';
 import { useConversations, useConversationMessages, useSendMessage, useMarkMessagesAsRead, Message } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserPresence } from '@/hooks/usePresence';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Send, Loader2, MessageCircle, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { OnlineStatus, AvatarOnlineIndicator } from '@/components/OnlineStatus';
+import { ConversationSkeleton, ChatMessageSkeleton } from '@/components/ui/skeleton-loaders';
 
 interface Friend {
   user_id: string;
@@ -61,15 +64,18 @@ function FriendsList({
           )}
           onClick={() => onSelectFriend(friend.user_id)}
         >
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={friend.avatar_url || ''} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {friend.full_name?.[0] || '?'}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={friend.avatar_url || ''} />
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {friend.full_name?.[0] || '?'}
+              </AvatarFallback>
+            </Avatar>
+            <AvatarOnlineIndicator userId={friend.user_id} />
+          </div>
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{friend.full_name}</p>
-            <p className="text-sm text-muted-foreground truncate">@{friend.username}</p>
+            <OnlineStatus userId={friend.user_id} showText size="sm" />
           </div>
         </div>
       ))}
@@ -121,6 +127,7 @@ function ConversationsList({
                 {conv.unread_count}
               </span>
             )}
+            <AvatarOnlineIndicator userId={conv.user_id} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
@@ -154,6 +161,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
   const { data: messages, isLoading } = useConversationMessages(partnerId);
   const sendMessage = useSendMessage();
   const markAsRead = useMarkMessagesAsRead();
+  const { data: presence } = useUserPresence(partnerId);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -182,26 +190,27 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="flex items-center gap-3 p-4 border-b">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={partnerAvatar || ''} />
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            {partnerName?.[0] || '?'}
-          </AvatarFallback>
-        </Avatar>
+      {/* Chat Header with Online Status */}
+      <div className="flex items-center gap-3 p-4 border-b bg-card">
+        <div className="relative">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={partnerAvatar || ''} />
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              {partnerName?.[0] || '?'}
+            </AvatarFallback>
+          </Avatar>
+          <AvatarOnlineIndicator userId={partnerId} />
+        </div>
         <div className="flex-1">
           <p className="font-semibold">{partnerName}</p>
-          <p className="text-sm text-muted-foreground">Online</p>
+          <OnlineStatus userId={partnerId} showText size="sm" />
         </div>
       </div>
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          </div>
+          <ChatMessageSkeleton />
         ) : !messages || messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
             <div className="text-center">
@@ -244,7 +253,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
       </ScrollArea>
 
       {/* Message Input */}
-      <div className="p-4 border-t">
+      <div className="p-4 border-t bg-card">
         <form onSubmit={handleSend} className="flex gap-2">
           <Input
             value={message}
@@ -272,7 +281,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
 
 function EmptyChatState() {
   return (
-    <div className="flex items-center justify-center h-full text-muted-foreground">
+    <div className="flex items-center justify-center h-full text-muted-foreground bg-muted/20">
       <div className="text-center">
         <MessageCircle className="h-16 w-16 mx-auto mb-4 opacity-30" />
         <h3 className="text-lg font-medium">Select a chat</h3>
@@ -306,15 +315,15 @@ export default function MessagesDesktopPage() {
   };
 
   return (
-    <div className="h-[calc(100vh-2rem)] flex gap-4">
+    <div className="h-full flex">
       {/* Left Panel - Friends & Conversations */}
-      <Card className="w-80 flex flex-col">
-        <CardHeader className="pb-2">
+      <div className="w-80 border-r flex flex-col bg-card">
+        <div className="p-4 border-b">
           <h2 className="text-lg font-semibold">Messages</h2>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
+        </div>
+        <div className="flex-1 flex flex-col overflow-hidden">
           <Tabs defaultValue="chats" className="flex-1 flex flex-col">
-            <TabsList className="mx-4 mb-2">
+            <TabsList className="mx-4 my-2">
               <TabsTrigger value="chats" className="flex-1">Chats</TabsTrigger>
               <TabsTrigger value="friends" className="flex-1">Friends</TabsTrigger>
             </TabsList>
@@ -322,9 +331,7 @@ export default function MessagesDesktopPage() {
             <TabsContent value="chats" className="flex-1 m-0 overflow-hidden">
               <ScrollArea className="h-full px-2">
                 {convsLoading ? (
-                  <div className="text-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
-                  </div>
+                  <ConversationSkeleton />
                 ) : (
                   <ConversationsList 
                     conversations={conversations} 
@@ -338,9 +345,7 @@ export default function MessagesDesktopPage() {
             <TabsContent value="friends" className="flex-1 m-0 overflow-hidden">
               <ScrollArea className="h-full px-2">
                 {friendsLoading ? (
-                  <div className="text-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
-                  </div>
+                  <ConversationSkeleton />
                 ) : (
                   <FriendsList 
                     friends={friends} 
@@ -351,11 +356,11 @@ export default function MessagesDesktopPage() {
               </ScrollArea>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Right Panel - Chat */}
-      <Card className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {selectedUserId && selectedUser ? (
           <ChatArea 
             partnerId={selectedUserId} 
@@ -365,7 +370,7 @@ export default function MessagesDesktopPage() {
         ) : (
           <EmptyChatState />
         )}
-      </Card>
+      </div>
     </div>
   );
 }

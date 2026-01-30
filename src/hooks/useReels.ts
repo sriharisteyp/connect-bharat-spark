@@ -35,6 +35,7 @@ export interface ReelComment {
 
 const REELS_PER_PAGE = 10;
 
+// Trending reels - all reels
 export function useReelsFeed() {
   const { user } = useAuth();
 
@@ -89,6 +90,81 @@ export function useReelsFeed() {
       return pages.length;
     },
     initialPageParam: 0,
+  });
+}
+
+// Following reels - only from people you follow
+export function useFollowingReels() {
+  const { user } = useAuth();
+
+  return useInfiniteQuery({
+    queryKey: ['reels', 'following', user?.id],
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!user?.id) return [];
+
+      // Get list of users we follow
+      const { data: following, error: followingError } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id);
+
+      if (followingError) throw followingError;
+
+      const followingIds = following?.map(f => f.following_id) || [];
+      const allIds = [...followingIds, user.id];
+
+      if (allIds.length === 0) return [];
+
+      const { data: reels, error } = await supabase
+        .from('reels')
+        .select('*')
+        .in('user_id', allIds)
+        .order('created_at', { ascending: false })
+        .range(pageParam * REELS_PER_PAGE, (pageParam + 1) * REELS_PER_PAGE - 1);
+
+      if (error) throw error;
+
+      const reelIds = reels.map(r => r.id);
+      const userIds = [...new Set(reels.map(r => r.user_id))];
+
+      const [likesResult, commentsResult, userLikesResult, profilesResult] = await Promise.all([
+        supabase.from('reel_likes').select('reel_id').in('reel_id', reelIds),
+        supabase.from('reel_comments').select('reel_id').in('reel_id', reelIds),
+        supabase.from('reel_likes').select('reel_id').in('reel_id', reelIds).eq('user_id', user.id),
+        supabase.from('profiles').select('user_id, username, full_name, avatar_url').in('user_id', userIds),
+      ]);
+
+      const profilesMap = (profilesResult.data || []).reduce((acc, p) => {
+        acc[p.user_id] = p;
+        return acc;
+      }, {} as Record<string, { username: string; full_name: string; avatar_url: string | null }>);
+
+      const likesCount = reelIds.reduce((acc, id) => {
+        acc[id] = likesResult.data?.filter(l => l.reel_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const commentsCount = reelIds.reduce((acc, id) => {
+        acc[id] = commentsResult.data?.filter(c => c.reel_id === id).length || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      const userLikes = new Set(userLikesResult.data?.map(l => l.reel_id) || []);
+
+      return reels.map(reel => ({
+        ...reel,
+        profile: profilesMap[reel.user_id],
+        likes_count: likesCount[reel.id] || 0,
+        comments_count: commentsCount[reel.id] || 0,
+        is_liked: userLikes.has(reel.id),
+      })) as Reel[];
+    },
+    getNextPageParam: (lastPage, pages) => {
+      if (lastPage.length < REELS_PER_PAGE) return undefined;
+      return pages.length;
+    },
+    initialPageParam: 0,
+    enabled: !!user?.id,
   });
 }
 
@@ -213,7 +289,6 @@ export function useLikeReel() {
 
       if (error) throw error;
 
-      // Create notification if liking someone else's reel
       if (reelUserId !== user.id) {
         await supabase.from('notifications').insert({
           user_id: reelUserId,
@@ -222,7 +297,10 @@ export function useLikeReel() {
         });
       }
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['reels'] });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reels'] });
     },
   });
@@ -244,7 +322,10 @@ export function useUnlikeReel() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ['reels'] });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['reels'] });
     },
   });
@@ -302,7 +383,6 @@ export function useCreateReelComment() {
 
       if (error) throw error;
 
-      // Create notification if commenting on someone else's reel
       if (reelUserId !== user.id) {
         await supabase.from('notifications').insert({
           user_id: reelUserId,

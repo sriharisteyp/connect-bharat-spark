@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import MainLayout from "@/components/layout/MainLayout";
 import ChatLayout from "@/components/layout/ChatLayout";
+import MessagesLayout from "@/components/layout/MessagesLayout";
 import LandingPage from "@/pages/Landing";
 import AuthPage from "@/pages/Auth";
 import FeedPage from "@/pages/Feed";
@@ -26,7 +27,15 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useTrackPresence } from "@/hooks/usePresence";
 import { useInAppNotifications } from "@/hooks/usePushNotifications";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60, // 1 minute
+      gcTime: 1000 * 60 * 5, // 5 minutes cache
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Component to track presence and enable in-app notifications
 function AppInitializer({ children }: { children: React.ReactNode }) {
@@ -59,10 +68,10 @@ function MessagesRoute() {
   const isMobile = useIsMobile();
   
   if (isMobile) {
-    return <MainLayout><MessagesPage /></MainLayout>;
+    return <MessagesLayout><MessagesPage /></MessagesLayout>;
   }
   
-  return <MainLayout><MessagesDesktopPage /></MainLayout>;
+  return <MessagesLayout><MessagesDesktopPage /></MessagesLayout>;
 }
 
 const App = () => (
