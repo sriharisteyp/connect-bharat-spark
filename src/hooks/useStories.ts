@@ -124,21 +124,30 @@ export function useStories() {
 
 // Upload story media
 export function useUploadStoryMedia() {
+  const { user } = useAuth();
+  
   return useMutation({
     mutationFn: async (file: File) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `stories/${fileName}`;
+      const fileName = `${user.id}/stories/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('posts')
-        .upload(filePath, file);
+        .upload(fileName, file, {
+          contentType: file.type,
+          upsert: false,
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Story upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('posts')
-        .getPublicUrl(filePath);
+        .getPublicUrl(fileName);
 
       return publicUrl;
     },

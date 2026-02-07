@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAcceptedFriends } from '@/hooks/useFriendRequests';
 import { useConversations, useConversationMessages, useSendMessage, useMarkMessagesAsRead, Message } from '@/hooks/useMessages';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,22 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { OnlineStatus, AvatarOnlineIndicator } from '@/components/OnlineStatus';
 import { ConversationSkeleton, ChatMessageSkeleton } from '@/components/ui/skeleton-loaders';
+import { VoiceMessageRecorder } from '@/components/VoiceMessageRecorder';
+import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer';
+import { ChatImageUpload } from '@/components/ChatImageUpload';
+import { TypingIndicator } from '@/components/TypingIndicator';
+import { useTypingIndicator, useTypingSubscription } from '@/hooks/usePresence';
+
+// Check if content is a voice message URL
+function isVoiceMessage(content: string): boolean {
+  return content.includes('/storage/v1/object/public/posts/') && content.endsWith('.webm');
+}
+
+// Check if content is an image URL
+function isImageMessage(content: string): boolean {
+  return content.includes('/storage/v1/object/public/posts/') && 
+    (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.endsWith('.gif') || content.endsWith('.webp'));
+}
 
 interface Friend {
   user_id: string;
@@ -161,7 +177,18 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
   const { data: messages, isLoading } = useConversationMessages(partnerId);
   const sendMessage = useSendMessage();
   const markAsRead = useMarkMessagesAsRead();
-  const { data: presence } = useUserPresence(partnerId);
+
+  // Typing indicators
+  const { setTyping } = useTypingIndicator(partnerId);
+  const isPartnerTyping = useTypingSubscription(partnerId);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleInputChange = useCallback((value: string) => {
+    setMessage(value);
+    setTyping(true);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => setTyping(false), 2000);
+  }, [setTyping]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -176,16 +203,25 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
         markAsRead.mutate(partnerId);
       }
     }
-  }, [partnerId, messages, user?.id, markAsRead]);
+  }, [partnerId, messages, user?.id]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
-
+    setTyping(false);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     sendMessage.mutate(
       { receiverId: partnerId, content: message.trim() },
       { onSuccess: () => setMessage('') }
     );
+  };
+
+  const handleSendVoice = (audioUrl: string) => {
+    sendMessage.mutate({ receiverId: partnerId, content: audioUrl });
+  };
+
+  const handleSendImage = (imageUrl: string) => {
+    sendMessage.mutate({ receiverId: partnerId, content: imageUrl });
   };
 
   return (
@@ -223,6 +259,8 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
           <div className="space-y-3">
             {messages.map((msg) => {
               const isOwn = msg.sender_id === user?.id;
+              const isVoice = isVoiceMessage(msg.content);
+              const isImage = isImageMessage(msg.content);
               return (
                 <div
                   key={msg.id}
@@ -236,7 +274,18 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
                         : 'bg-muted rounded-bl-md'
                     )}
                   >
-                    <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    {isVoice ? (
+                      <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
+                    ) : isImage ? (
+                      <img 
+                        src={msg.content} 
+                        alt="Shared image" 
+                        className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer"
+                        onClick={() => window.open(msg.content, '_blank')}
+                      />
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                    )}
                     <p className={cn(
                       'text-xs mt-1',
                       isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
@@ -247,6 +296,16 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
                 </div>
               );
             })}
+
+            {/* Typing indicator */}
+            {isPartnerTyping && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                  <TypingIndicator isTyping={true} />
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
         )}
@@ -254,12 +313,20 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: {
 
       {/* Message Input */}
       <div className="p-4 border-t bg-card">
-        <form onSubmit={handleSend} className="flex gap-2">
+        <form onSubmit={handleSend} className="flex gap-2 items-center">
+          <ChatImageUpload 
+            onImageSelected={handleSendImage} 
+            disabled={sendMessage.isPending} 
+          />
           <Input
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => handleInputChange(e.target.value)}
             placeholder="Type a message..."
             className="flex-1"
+            disabled={sendMessage.isPending}
+          />
+          <VoiceMessageRecorder 
+            onSend={handleSendVoice} 
             disabled={sendMessage.isPending}
           />
           <Button 
