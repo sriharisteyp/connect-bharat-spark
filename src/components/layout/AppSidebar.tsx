@@ -41,7 +41,7 @@ export function AppSidebar() {
       {/* Logo */}
       <Link to="/" className="mb-6">
         <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-hero flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-lg lg:text-xl">D</span>
+          <span className="text-primary-foreground font-bold text-lg lg:text-xl">L</span>
         </div>
       </Link>
 

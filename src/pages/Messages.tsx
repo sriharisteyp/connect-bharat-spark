@@ -2,13 +2,14 @@ import { useConversations } from '@/hooks/useMessages';
 import { useFriends } from '@/hooks/useFriends';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, MessageCircle } from 'lucide-react';
+import { Users, MessageCircle, Hash } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OnlineStatus, AvatarOnlineIndicator } from '@/components/OnlineStatus';
 import { ConversationSkeleton } from '@/components/ui/skeleton-loaders';
+import { GroupChatPanel } from '@/components/GroupChatPanel';
 
 export default function MessagesPage() {
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
@@ -19,10 +20,14 @@ export default function MessagesPage() {
       <h1 className="text-2xl font-bold">Messages</h1>
 
       <Tabs defaultValue="chats" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="chats" className="gap-2">
             <MessageCircle className="h-4 w-4" />
             Chats
+          </TabsTrigger>
+          <TabsTrigger value="groups" className="gap-2">
+            <Hash className="h-4 w-4" />
+            Groups
           </TabsTrigger>
           <TabsTrigger value="friends" className="gap-2">
             <Users className="h-4 w-4" />
@@ -79,6 +84,13 @@ export default function MessagesPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Groups Tab */}
+        <TabsContent value="groups" className="mt-4">
+          <div className="h-[60vh] border rounded-lg overflow-hidden">
+            <GroupChatPanel />
+          </div>
         </TabsContent>
 
         {/* Friends Tab */}
