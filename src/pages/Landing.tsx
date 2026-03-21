@@ -6,8 +6,8 @@ import { Users, MessageCircle, Shield, Globe, ArrowRight, Sparkles, Heart, Zap, 
 const features = [
   {
     icon: Users,
-    title: 'Connect with Bharat',
-    description: 'Join millions of Indians sharing their stories, ideas, and moments.',
+    title: 'Connect Globally',
+    description: 'Join a vibrant community sharing stories, ideas, and moments.',
   },
   {
     icon: MessageCircle,
@@ -17,12 +17,12 @@ const features = [
   {
     icon: Shield,
     title: 'Privacy First',
-    description: 'Your data stays in India. Built with security and trust at the core.',
+    description: 'Your data is secured. Built with security and trust at the core.',
   },
   {
     icon: Zap,
     title: 'Lightning Fast',
-    description: 'Optimized for Indian networks. Works smoothly even on 2G/3G.',
+    description: 'Optimized for speed. Works smoothly on any connection.',
   },
   {
     icon: Camera,
@@ -39,15 +39,9 @@ const features = [
 const stats = [
   { value: '1M+', label: 'Active Users' },
   { value: '500K+', label: 'Daily Posts' },
-  { value: '29', label: 'States Connected' },
+  { value: '150+', label: 'Countries' },
   { value: '99.9%', label: 'Uptime' },
 ];
-
-const fadeInUp = {
-  initial: { opacity: 0, y: 30 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6 },
-};
 
 export default function LandingPage() {
   return (
@@ -60,7 +54,7 @@ export default function LandingPage() {
               <div className="w-9 h-9 rounded-xl bg-gradient-hero flex items-center justify-center shadow-md">
                 <Globe className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground tracking-tight">DesiConnect</span>
+              <span className="text-xl font-bold text-foreground tracking-tight">Linko</span>
             </div>
             <div className="flex items-center gap-3">
               <Link to="/auth">
@@ -78,7 +72,6 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="pt-28 pb-16 sm:pt-36 sm:pb-24 px-4 relative overflow-hidden">
-        {/* Background effects */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent" />
         <div className="absolute top-20 -left-32 w-96 h-96 bg-primary/10 rounded-full blur-[120px]" />
         <div className="absolute bottom-0 -right-32 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px]" />
@@ -98,24 +91,24 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 border border-primary/20"
               >
                 <Sparkles className="w-4 h-4" />
-                India's Own Social Platform
+                Your Social Universe
               </motion.div>
               
               <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold text-foreground leading-[1.1] mb-6 tracking-tight">
-                Where <span className="text-primary">Bharat</span> connects,
+                Where you <span className="text-primary">connect</span>,
                 <br className="hidden sm:block" />
-                shares & <span className="bg-gradient-hero bg-clip-text text-transparent">shines</span>
+                share & <span className="bg-gradient-hero bg-clip-text text-transparent">shine</span>
               </h1>
               
               <p className="text-lg text-muted-foreground mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-                Stories, reels, voice messages & real-time chat — all in one place. 
-                Built from scratch for the Indian community.
+                Stories, reels, group chats, voice messages & real-time conversations — all in one place. 
+                Built for the community, by the community.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                 <Link to="/auth">
                   <Button size="lg" className="bg-gradient-hero hover:opacity-90 w-full sm:w-auto gap-2 text-base h-12 px-8 shadow-lg shadow-primary/20">
-                    Join DesiConnect
+                    Join Linko
                     <ArrowRight className="w-5 h-5" />
                   </Button>
                 </Link>
@@ -136,28 +129,23 @@ export default function LandingPage() {
               className="relative hidden lg:flex justify-center"
             >
               <div className="relative">
-                {/* Phone frame */}
                 <div className="w-[280px] h-[560px] bg-card rounded-[3rem] border-[6px] border-foreground/10 shadow-2xl overflow-hidden relative">
-                  {/* Status bar */}
                   <div className="h-10 bg-gradient-hero flex items-center justify-center">
                     <div className="w-20 h-5 bg-foreground/20 rounded-full" />
                   </div>
                   
-                  {/* App content mockup */}
                   <div className="p-3 space-y-3">
-                    {/* Stories row */}
                     <div className="flex gap-2">
-                      {['🟠', '🟢', '🔵', '🟣'].map((c, i) => (
+                      {[1, 2, 3, 4].map((_, i) => (
                         <motion.div 
                           key={i}
                           animate={{ scale: [1, 1.05, 1] }}
                           transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
-                          className="w-12 h-12 rounded-full bg-gradient-hero opacity-60 flex items-center justify-center text-xs"
+                          className="w-12 h-12 rounded-full bg-gradient-hero opacity-60"
                         />
                       ))}
                     </div>
                     
-                    {/* Post mockup */}
                     <div className="bg-muted/50 rounded-xl p-3 space-y-2">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-primary/30" />
@@ -174,7 +162,6 @@ export default function LandingPage() {
                       </div>
                     </div>
 
-                    {/* Another post */}
                     <div className="bg-muted/50 rounded-xl p-3 space-y-2">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-accent/30" />
@@ -188,7 +175,6 @@ export default function LandingPage() {
                     </div>
                   </div>
                   
-                  {/* Bottom nav */}
                   <div className="absolute bottom-0 left-0 right-0 h-12 bg-card border-t border-border flex items-center justify-around px-4">
                     {[Globe, Users, Camera, Bell, MessageCircle].map((Icon, i) => (
                       <Icon key={i} className={`w-4 h-4 ${i === 0 ? 'text-primary' : 'text-muted-foreground'}`} />
@@ -196,7 +182,6 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Floating elements */}
                 <motion.div
                   animate={{ y: [0, -8, 0], rotate: [0, 3, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -258,7 +243,7 @@ export default function LandingPage() {
               Everything You Need
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-              A complete social experience — crafted for Indian users.
+              A complete social experience — crafted for you.
             </p>
           </motion.div>
 
@@ -283,7 +268,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* App showcase section */}
+      {/* Chat showcase */}
       <section className="py-20 px-4 bg-muted/30">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -299,7 +284,7 @@ export default function LandingPage() {
               <div className="space-y-4">
                 {[
                   { icon: MessageCircle, text: 'Send voice notes, images & text in real-time' },
-                  { icon: Users, text: 'See who\'s online with live presence indicators' },
+                  { icon: Users, text: 'Group chats — join CRACK HEADS and meet everyone!' },
                   { icon: Bell, text: 'Never miss a message with instant notifications' },
                   { icon: Shield, text: 'End-to-end privacy — your chats stay yours' },
                 ].map((item, i) => (
@@ -327,7 +312,6 @@ export default function LandingPage() {
               transition={{ duration: 0.6 }}
               className="bg-card rounded-2xl border border-border p-6 shadow-xl"
             >
-              {/* Chat mockup */}
               <div className="space-y-3">
                 <div className="flex items-center gap-3 pb-3 border-b border-border">
                   <div className="relative">
@@ -386,10 +370,10 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_70%)]" />
             <div className="relative z-10">
               <h2 className="text-3xl sm:text-4xl font-extrabold text-primary-foreground mb-4 tracking-tight">
-                Ready to Join the Movement?
+                Ready to Join Linko?
               </h2>
               <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto text-lg">
-                Create your free account and start connecting with millions of Indians today.
+                Create your free account and start connecting today.
               </p>
               <Link to="/auth">
                 <Button size="lg" variant="secondary" className="gap-2 text-base h-12 px-8 shadow-lg">
@@ -409,10 +393,10 @@ export default function LandingPage() {
             <div className="w-7 h-7 rounded-lg bg-gradient-hero flex items-center justify-center">
               <Globe className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-foreground">DesiConnect</span>
+            <span className="font-bold text-foreground">Linko</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2025 DesiConnect. Made with ❤️ in India by{' '}
+            © 2025 Linko. Made with ❤️ by{' '}
             <Link to="/about" className="text-primary hover:underline">Sri Hari S A</Link>
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
