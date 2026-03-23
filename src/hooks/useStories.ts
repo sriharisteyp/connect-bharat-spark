@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -30,25 +30,41 @@ export interface StoryGroup {
   has_unviewed: boolean;
 }
 
-// Fetch all active stories grouped by user
+// Fetch stories only from friends (people you follow who follow you back)
 export function useStories() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['stories'],
+    queryKey: ['stories', user?.id],
     queryFn: async () => {
+      if (!user?.id) return [];
+
+      // Get mutual friends (people you follow who follow you back)
+      const [{ data: following }, { data: followers }] = await Promise.all([
+        supabase.from('follows').select('following_id').eq('follower_id', user.id),
+        supabase.from('follows').select('follower_id').eq('following_id', user.id),
+      ]);
+
+      const followingSet = new Set(following?.map(f => f.following_id) || []);
+      const followerSet = new Set(followers?.map(f => f.follower_id) || []);
+      
+      // Friends = mutual follows + self
+      const friendIds = [...followingSet].filter(id => followerSet.has(id));
+      friendIds.push(user.id);
+
+      if (friendIds.length === 0) return [];
+
       const { data: stories, error } = await supabase
         .from('stories')
         .select('*')
         .gt('expires_at', new Date().toISOString())
+        .in('user_id', friendIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Get unique user IDs
       const userIds = [...new Set(stories.map(s => s.user_id))];
 
-      // Fetch profiles
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, username, full_name, avatar_url')
@@ -59,19 +75,11 @@ export function useStories() {
         return acc;
       }, {} as Record<string, { username: string; full_name: string; avatar_url: string | null }>);
 
-      // Get view counts and user's views
       const storyIds = stories.map(s => s.id);
-      
+
       const [viewCountsResult, userViewsResult] = await Promise.all([
-        supabase
-          .from('story_views')
-          .select('story_id')
-          .in('story_id', storyIds),
-        user ? supabase
-          .from('story_views')
-          .select('story_id')
-          .in('story_id', storyIds)
-          .eq('viewer_id', user.id) : Promise.resolve({ data: [] })
+        supabase.from('story_views').select('story_id').in('story_id', storyIds),
+        supabase.from('story_views').select('story_id').in('story_id', storyIds).eq('viewer_id', user.id),
       ]);
 
       const viewCounts = storyIds.reduce((acc, id) => {
@@ -81,7 +89,6 @@ export function useStories() {
 
       const userViews = new Set(userViewsResult.data?.map(v => v.story_id) || []);
 
-      // Group stories by user
       const groupedStories: StoryGroup[] = [];
       const userStoryMap = new Map<string, Story[]>();
 
@@ -99,10 +106,9 @@ export function useStories() {
         userStoryMap.get(story.user_id)!.push(enrichedStory);
       });
 
-      // Put current user's stories first
       const sortedUserIds = [...userStoryMap.keys()].sort((a, b) => {
-        if (a === user?.id) return -1;
-        if (b === user?.id) return 1;
+        if (a === user.id) return -1;
+        if (b === user.id) return 1;
         return 0;
       });
 
@@ -118,11 +124,11 @@ export function useStories() {
 
       return groupedStories;
     },
-    refetchInterval: 60000, // Refresh every minute to check for expired stories
+    refetchInterval: 60000,
+    enabled: !!user?.id,
   });
 }
 
-// Upload story media
 export function useUploadStoryMedia() {
   const { user } = useAuth();
   
@@ -154,21 +160,12 @@ export function useUploadStoryMedia() {
   });
 }
 
-// Create a new story
 export function useCreateStory() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ 
-      mediaUrl, 
-      mediaType, 
-      caption 
-    }: { 
-      mediaUrl: string; 
-      mediaType: string; 
-      caption?: string;
-    }) => {
+    mutationFn: async ({ mediaUrl, mediaType, caption }: { mediaUrl: string; mediaType: string; caption?: string }) => {
       if (!user?.id) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
@@ -191,17 +188,12 @@ export function useCreateStory() {
   });
 }
 
-// Delete a story
 export function useDeleteStory() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (storyId: string) => {
-      const { error } = await supabase
-        .from('stories')
-        .delete()
-        .eq('id', storyId);
-
+      const { error } = await supabase.from('stories').delete().eq('id', storyId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -210,7 +202,6 @@ export function useDeleteStory() {
   });
 }
 
-// Mark a story as viewed
 export function useViewStory() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -221,10 +212,7 @@ export function useViewStory() {
 
       const { error } = await supabase
         .from('story_views')
-        .upsert({
-          story_id: storyId,
-          viewer_id: user.id,
-        }, { onConflict: 'story_id,viewer_id' });
+        .upsert({ story_id: storyId, viewer_id: user.id }, { onConflict: 'story_id,viewer_id' });
 
       if (error) throw error;
     },
@@ -234,7 +222,6 @@ export function useViewStory() {
   });
 }
 
-// Get story viewers (for story owner)
 export function useStoryViewers(storyId: string) {
   return useQuery({
     queryKey: ['story-viewers', storyId],
@@ -248,7 +235,6 @@ export function useStoryViewers(storyId: string) {
       if (error) throw error;
 
       const viewerIds = views.map(v => v.viewer_id);
-      
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, username, full_name, avatar_url')
