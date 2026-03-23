@@ -25,8 +25,12 @@ function isVoiceMessage(content: string): boolean {
 }
 
 function isImageMessage(content: string): boolean {
-  return content.includes('/storage/v1/object/public/posts/') && 
-    (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.endsWith('.gif') || content.endsWith('.webp'));
+  return (content.includes('/storage/v1/object/public/posts/') && 
+    (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.endsWith('.gif') || content.endsWith('.webp')));
+}
+
+function isGifMessage(content: string): boolean {
+  return content.includes('giphy.com') || content.includes('tenor.com');
 }
 
 interface Friend {
