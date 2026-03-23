@@ -18,6 +18,7 @@ import { ChatImageUpload } from '@/components/ChatImageUpload';
 import { TypingIndicator } from '@/components/TypingIndicator';
 import { useTypingIndicator, useTypingSubscription } from '@/hooks/usePresence';
 import { GroupChatPanel } from '@/components/GroupChatPanel';
+import { GifPicker } from '@/components/GifPicker';
 
 function isVoiceMessage(content: string): boolean {
   return content.includes('/storage/v1/object/public/posts/') && content.endsWith('.webm');
