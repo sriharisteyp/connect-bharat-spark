@@ -228,6 +228,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
       <div className="p-4 border-t bg-card">
         <form onSubmit={handleSend} className="flex gap-2 items-center">
           <ChatImageUpload onImageSelected={handleSendImage} disabled={sendMessage.isPending} />
+          <GifPicker onGifSelected={handleSendGif} disabled={sendMessage.isPending} />
           <Input value={message} onChange={(e) => handleInputChange(e.target.value)} placeholder="Type a message..." className="flex-1" disabled={sendMessage.isPending} />
           <VoiceMessageRecorder onSend={handleSendVoice} disabled={sendMessage.isPending} />
           <Button type="submit" size="icon" disabled={!message.trim() || sendMessage.isPending}>
