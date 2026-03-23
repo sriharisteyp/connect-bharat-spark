@@ -10,6 +10,7 @@ export interface GroupChat {
   avatar_url: string | null;
   is_default: boolean;
   created_at: string;
+  created_by: string;
   member_count?: number;
 }
 
@@ -20,6 +21,19 @@ export interface GroupMessage {
   content: string;
   created_at: string;
   sender?: {
+    username: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
+}
+
+export interface GroupMember {
+  id: string;
+  group_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+  profile?: {
     username: string;
     full_name: string;
     avatar_url: string | null;
@@ -41,7 +55,6 @@ export function useGroupChats() {
 
       if (error) throw error;
 
-      // Get member counts
       const groupIds = data.map(g => g.id);
       const { data: members } = await supabase
         .from('group_members')
@@ -80,7 +93,6 @@ export function useGroupMessages(groupId: string | null) {
 
       if (error) throw error;
 
-      // Get sender profiles
       const senderIds = [...new Set(messages.map(m => m.sender_id))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -100,7 +112,6 @@ export function useGroupMessages(groupId: string | null) {
     enabled: !!groupId && !!user?.id,
   });
 
-  // Real-time subscription for group messages
   useEffect(() => {
     if (!groupId || !user?.id) return;
 
@@ -155,6 +166,46 @@ export function useSendGroupMessage() {
   });
 }
 
+export function useCreateGroupChat() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
+      if (!user?.id) throw new Error('Not authenticated');
+
+      // Create the group
+      const { data: group, error } = await supabase
+        .from('group_chats')
+        .insert({
+          name,
+          description: description || null,
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add creator as admin
+      const { error: memberError } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: group.id,
+          user_id: user.id,
+          role: 'admin',
+        });
+
+      if (memberError) throw memberError;
+
+      return group;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-chats'] });
+    },
+  });
+}
+
 export function useUpdateGroupChat() {
   const queryClient = useQueryClient();
 
@@ -167,6 +218,24 @@ export function useUpdateGroupChat() {
       const { error } = await supabase
         .from('group_chats')
         .update(updates)
+        .eq('id', groupId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['group-chats'] });
+    },
+  });
+}
+
+export function useDeleteGroupChat() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (groupId: string) => {
+      const { error } = await supabase
+        .from('group_chats')
+        .delete()
         .eq('id', groupId);
 
       if (error) throw error;
@@ -204,8 +273,88 @@ export function useGroupMembers(groupId: string | null) {
       return members.map(m => ({
         ...m,
         profile: profilesMap[m.user_id],
-      }));
+      })) as GroupMember[];
     },
     enabled: !!groupId,
+  });
+}
+
+export function useAddGroupMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('group_members')
+        .insert({
+          group_id: groupId,
+          user_id: userId,
+          role: 'member',
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-chats'] });
+    },
+  });
+}
+
+export function useRemoveGroupMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-chats'] });
+    },
+  });
+}
+
+export function usePromoteToAdmin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('group_members')
+        .update({ role: 'admin' })
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+    },
+  });
+}
+
+export function useDemoteFromAdmin() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ groupId, userId }: { groupId: string; userId: string }) => {
+      const { error } = await supabase
+        .from('group_members')
+        .update({ role: 'member' })
+        .eq('group_id', groupId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['group-members', groupId] });
+    },
   });
 }

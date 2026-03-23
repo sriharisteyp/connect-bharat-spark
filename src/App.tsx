@@ -21,6 +21,7 @@ import UserProfilePage from "@/pages/UserProfile";
 import SettingsPage from "@/pages/Settings";
 import AboutPage from "@/pages/About";
 import ReelsPage from "@/pages/Reels";
+import ReelViewPage from "@/pages/ReelView";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -92,6 +93,7 @@ const App = () => (
                 <Route path="/messages" element={<MessagesRoute />} />
                 <Route path="/messages/:partnerId" element={<ChatLayout><ChatPage /></ChatLayout>} />
                 <Route path="/reels" element={<MainLayout><ReelsPage /></MainLayout>} />
+                <Route path="/reels/:reelId" element={<MainLayout><ReelViewPage /></MainLayout>} />
                 <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
                 <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />
                 <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />

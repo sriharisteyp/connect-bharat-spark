@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { useReelsFeed, useFollowingReels, useCreateReel, useUploadReelMedia, useLikeReel, useUnlikeReel, useDeleteReel, Reel } from '@/hooks/useReels';
+import { useState, useRef } from 'react';
+import { useReelsFeed, useFollowingReels, useCreateReel, useUploadReelMedia, Reel } from '@/hooks/useReels';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,230 +7,61 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Heart, MessageCircle, Share2, Plus, Loader2, Play, Image as ImageIcon, Video, Maximize2, ChevronDown, ChevronUp, MoreVertical, Trash2, Flame, Users } from 'lucide-react';
+import { Heart, MessageCircle, Plus, Loader2, Play, Image as ImageIcon, Video, Flame, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { FullscreenReelViewer } from '@/components/FullscreenReelViewer';
-import { ReelComments } from '@/components/ReelComments';
 import { AuthPromptDialog } from '@/components/AuthPromptDialog';
-import { ShareReelDialog } from '@/components/ShareReelDialog';
-import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { ReelGridSkeleton } from '@/components/ui/skeleton-loaders';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
-interface ReelCardProps {
-  reel: Reel;
-  reels: Reel[];
-  index: number;
-  onOpenFullscreen: (index: number) => void;
-}
-
-function ReelCard({ reel, reels, index, onOpenFullscreen }: ReelCardProps) {
+function ReelCard({ reel }: { reel: Reel }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const likeReel = useLikeReel();
-  const unlikeReel = useUnlikeReel();
-  const deleteReel = useDeleteReel();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showComments, setShowComments] = useState(false);
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const [showShareDialog, setShowShareDialog] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  
-  const isOwnReel = user?.id === reel.user_id;
-
-  const handleDelete = async () => {
-    try {
-      await deleteReel.mutateAsync(reel.id);
-      toast.success('Reel deleted');
-    } catch (error) {
-      toast.error('Failed to delete reel');
-    }
-  };
-
-  const handleLike = () => {
-    if (!user) {
-      setShowAuthPrompt(true);
-      return;
-    }
-    if (reel.is_liked) {
-      unlikeReel.mutate(reel.id);
-    } else {
-      likeReel.mutate({ reelId: reel.id, userId: reel.user_id });
-    }
-  };
-
-  const handleShare = () => {
-    if (!user) {
-      setShowAuthPrompt(true);
-      return;
-    }
-    setShowShareDialog(true);
-  };
-
-  const handlePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
 
   return (
-    <>
-      <Card className="overflow-hidden group">
-        <CardContent className="p-0">
-          <div className="flex items-center gap-3 p-3">
-            <Avatar 
-              className="h-10 w-10 cursor-pointer"
-              onClick={() => navigate(`/user/${reel.profile?.username}`)}
-            >
-              <AvatarImage src={reel.profile?.avatar_url || ''} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {reel.profile?.full_name?.[0] || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p 
-                className="font-semibold truncate cursor-pointer hover:underline"
-                onClick={() => navigate(`/user/${reel.profile?.username}`)}
-              >
-                {reel.profile?.full_name}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}
-              </p>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={() => onOpenFullscreen(index)}
-              >
-                <Maximize2 className="h-5 w-5" />
-              </Button>
-              
-              {isOwnReel && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DeleteConfirmDialog
-                      title="Delete Reel"
-                      description="Are you sure you want to delete this reel? This action cannot be undone."
-                      onConfirm={handleDelete}
-                      isPending={deleteReel.isPending}
-                      trigger={
-                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive focus:text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      }
-                    />
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          </div>
-
-          <AspectRatio ratio={9/16} className="bg-black cursor-pointer" onClick={() => onOpenFullscreen(index)}>
-            {reel.media_type === 'video' ? (
-              <div className="relative w-full h-full" onClick={(e) => { e.stopPropagation(); handlePlayPause(); }}>
-                <video
-                  ref={videoRef}
-                  src={reel.media_url}
-                  className="w-full h-full object-cover"
-                  loop
-                  playsInline
-                  muted
-                  poster={reel.thumbnail_url || undefined}
-                />
-                {!isPlaying && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Play className="h-16 w-16 text-white" fill="white" />
-                  </div>
-                )}
-              </div>
-            ) : (
+    <Card 
+      className="overflow-hidden cursor-pointer group hover:ring-2 hover:ring-primary/50 transition-all"
+      onClick={() => navigate(`/reels/${reel.id}`)}
+    >
+      <CardContent className="p-0">
+        <AspectRatio ratio={9/16} className="bg-black relative">
+          {reel.media_type === 'video' ? (
+            <>
               <img 
-                src={reel.media_url} 
+                src={reel.thumbnail_url || reel.media_url} 
                 alt="Reel" 
                 className="w-full h-full object-cover"
               />
-            )}
-          </AspectRatio>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <Play className="h-10 w-10 text-white opacity-80" fill="white" />
+              </div>
+            </>
+          ) : (
+            <img src={reel.media_url} alt="Reel" className="w-full h-full object-cover" />
+          )}
 
-          <div className="p-3 space-y-2">
-            <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="gap-2"
-                onClick={handleLike}
-              >
-                <Heart className={cn("h-5 w-5", reel.is_liked && "fill-current text-accent")} />
-                <span>{reel.likes_count || 0}</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="gap-2"
-                onClick={() => setShowComments(!showComments)}
-              >
-                <MessageCircle className="h-5 w-5" />
-                <span>{reel.comments_count || 0}</span>
-                {showComments ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleShare}>
-                <Share2 className="h-5 w-5" />
-              </Button>
+          {/* Overlay info */}
+          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="flex items-center gap-2 mb-1">
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={reel.profile?.avatar_url || ''} />
+                <AvatarFallback className="text-xs bg-primary text-primary-foreground">{reel.profile?.full_name?.[0]}</AvatarFallback>
+              </Avatar>
+              <span className="text-white text-xs font-medium truncate">{reel.profile?.full_name}</span>
             </div>
-
-            {reel.caption && (
-              <p className="text-sm">
-                <span className="font-semibold mr-2">{reel.profile?.username}</span>
-                {reel.caption}
-              </p>
-            )}
-
-            <Collapsible open={showComments}>
-              <CollapsibleContent className="pt-3 border-t mt-3">
-                <ReelComments reelId={reel.id} reelUserId={reel.user_id} />
-              </CollapsibleContent>
-            </Collapsible>
+            <div className="flex items-center gap-3 text-white/80 text-xs">
+              <span className="flex items-center gap-1">
+                <Heart className={cn("h-3 w-3", reel.is_liked && "fill-current text-red-400")} /> {reel.likes_count || 0}
+              </span>
+              <span className="flex items-center gap-1">
+                <MessageCircle className="h-3 w-3" /> {reel.comments_count || 0}
+              </span>
+            </div>
           </div>
-        </CardContent>
-      </Card>
-
-      <AuthPromptDialog 
-        open={showAuthPrompt} 
-        onOpenChange={setShowAuthPrompt}
-        title="Sign in to continue"
-        description="Please sign in to like, comment, or share reels."
-      />
-
-      <ShareReelDialog 
-        open={showShareDialog} 
-        onOpenChange={setShowShareDialog}
-        reelId={reel.id}
-      />
-    </>
+        </AspectRatio>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -248,13 +79,17 @@ function CreateReelDialog() {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      const url = URL.createObjectURL(selectedFile);
-      setPreview(url);
+      setPreview(URL.createObjectURL(selectedFile));
     }
   };
 
   const handleSubmit = async () => {
     if (!file) return;
+
+    // Close dialog immediately for instant feel
+    const captionValue = caption.trim();
+    setOpen(false);
+    toast.info('Uploading reel...');
 
     try {
       const mediaUrl = await uploadMedia.mutateAsync(file);
@@ -263,20 +98,17 @@ function CreateReelDialog() {
       await createReel.mutateAsync({
         mediaUrl,
         mediaType,
-        caption: caption.trim() || undefined,
+        caption: captionValue || undefined,
       });
 
-      toast.success('Reel created successfully!');
-      setOpen(false);
+      toast.success('Reel posted!');
       setFile(null);
       setPreview(null);
       setCaption('');
-    } catch (error) {
+    } catch {
       toast.error('Failed to create reel');
     }
   };
-
-  const isLoading = uploadMedia.isPending || createReel.isPending;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -291,13 +123,7 @@ function CreateReelDialog() {
           <DialogTitle>Create New Reel</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,video/*"
-            onChange={handleFileChange}
-            className="hidden"
-          />
+          <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileChange} className="hidden" />
 
           {preview ? (
             <AspectRatio ratio={9/16} className="bg-muted rounded-lg overflow-hidden">
@@ -317,43 +143,21 @@ function CreateReelDialog() {
                   <ImageIcon className="h-8 w-8 text-muted-foreground" />
                   <Video className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Click to upload a photo or video
-                </p>
+                <p className="text-sm text-muted-foreground">Click to upload a photo or video</p>
               </div>
             </div>
           )}
 
-          <Textarea
-            placeholder="Write a caption..."
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            rows={3}
-          />
+          <Textarea placeholder="Write a caption..." value={caption} onChange={(e) => setCaption(e.target.value)} rows={3} />
 
           <div className="flex gap-2">
             {preview && (
-              <Button 
-                variant="outline" 
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
-              >
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
                 Change Media
               </Button>
             )}
-            <Button 
-              className="flex-1" 
-              onClick={handleSubmit}
-              disabled={!file || isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                'Post Reel'
-              )}
+            <Button className="flex-1" onClick={handleSubmit} disabled={!file}>
+              Post Reel
             </Button>
           </div>
         </div>
@@ -367,29 +171,13 @@ export default function ReelsPage() {
   const [activeTab, setActiveTab] = useState<'trending' | 'following'>('trending');
   const { data: trendingData, isLoading: trendingLoading, fetchNextPage: fetchTrendingNext, hasNextPage: hasTrendingNext, isFetchingNextPage: isFetchingTrending } = useReelsFeed();
   const { data: followingData, isLoading: followingLoading, fetchNextPage: fetchFollowingNext, hasNextPage: hasFollowingNext, isFetchingNextPage: isFetchingFollowing } = useFollowingReels();
-  const [fullscreenOpen, setFullscreenOpen] = useState(false);
-  const [fullscreenIndex, setFullscreenIndex] = useState(0);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
   const trendingReels = trendingData?.pages.flat() || [];
   const followingReels = followingData?.pages.flat() || [];
-  const currentReels = activeTab === 'trending' ? trendingReels : followingReels;
-
-  const openFullscreen = (index: number) => {
-    setFullscreenIndex(index);
-    setFullscreenOpen(true);
-  };
-
-  const handleCreateClick = () => {
-    if (!user) {
-      setShowAuthPrompt(true);
-      return;
-    }
-  };
 
   return (
     <div className="space-y-6 pb-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Reels</h1>
@@ -398,23 +186,20 @@ export default function ReelsPage() {
         {user ? (
           <CreateReelDialog />
         ) : (
-          <Button className="gap-2" onClick={handleCreateClick}>
+          <Button className="gap-2" onClick={() => setShowAuthPrompt(true)}>
             <Plus className="h-4 w-4" />
             Create Reel
           </Button>
         )}
       </div>
 
-      {/* Feed Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'trending' | 'following')}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="trending" className="gap-2">
-            <Flame className="h-4 w-4" />
-            Trending
+            <Flame className="h-4 w-4" /> Trending
           </TabsTrigger>
           <TabsTrigger value="following" className="gap-2">
-            <Users className="h-4 w-4" />
-            Following
+            <Users className="h-4 w-4" /> Following
           </TabsTrigger>
         </TabsList>
 
@@ -431,24 +216,14 @@ export default function ReelsPage() {
             </Card>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {trendingReels.map((reel, index) => (
-                  <ReelCard 
-                    key={reel.id} 
-                    reel={reel} 
-                    reels={trendingReels}
-                    index={index}
-                    onOpenFullscreen={openFullscreen}
-                  />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {trendingReels.map((reel) => (
+                  <ReelCard key={reel.id} reel={reel} />
                 ))}
               </div>
               {hasTrendingNext && (
                 <div className="text-center mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => fetchTrendingNext()}
-                    disabled={isFetchingTrending}
-                  >
+                  <Button variant="outline" onClick={() => fetchTrendingNext()} disabled={isFetchingTrending}>
                     {isFetchingTrending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Load More
                   </Button>
@@ -478,24 +253,14 @@ export default function ReelsPage() {
             </Card>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {followingReels.map((reel, index) => (
-                  <ReelCard 
-                    key={reel.id} 
-                    reel={reel} 
-                    reels={followingReels}
-                    index={index}
-                    onOpenFullscreen={openFullscreen}
-                  />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {followingReels.map((reel) => (
+                  <ReelCard key={reel.id} reel={reel} />
                 ))}
               </div>
               {hasFollowingNext && (
                 <div className="text-center mt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => fetchFollowingNext()}
-                    disabled={isFetchingFollowing}
-                  >
+                  <Button variant="outline" onClick={() => fetchFollowingNext()} disabled={isFetchingFollowing}>
                     {isFetchingFollowing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Load More
                   </Button>
@@ -506,21 +271,7 @@ export default function ReelsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Fullscreen Viewer */}
-      <FullscreenReelViewer
-        reels={currentReels}
-        initialIndex={fullscreenIndex}
-        open={fullscreenOpen}
-        onOpenChange={setFullscreenOpen}
-      />
-
-      {/* Auth Prompt */}
-      <AuthPromptDialog 
-        open={showAuthPrompt} 
-        onOpenChange={setShowAuthPrompt}
-        title="Sign in to create"
-        description="Please sign in to create and share reels."
-      />
+      <AuthPromptDialog open={showAuthPrompt} onOpenChange={setShowAuthPrompt} title="Sign in to continue" description="Please sign in to create reels." />
     </div>
   );
 }

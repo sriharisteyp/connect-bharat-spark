@@ -18,14 +18,19 @@ import { ChatImageUpload } from '@/components/ChatImageUpload';
 import { TypingIndicator } from '@/components/TypingIndicator';
 import { useTypingIndicator, useTypingSubscription } from '@/hooks/usePresence';
 import { GroupChatPanel } from '@/components/GroupChatPanel';
+import { GifPicker } from '@/components/GifPicker';
 
 function isVoiceMessage(content: string): boolean {
   return content.includes('/storage/v1/object/public/posts/') && content.endsWith('.webm');
 }
 
 function isImageMessage(content: string): boolean {
-  return content.includes('/storage/v1/object/public/posts/') && 
-    (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.endsWith('.gif') || content.endsWith('.webp'));
+  return (content.includes('/storage/v1/object/public/posts/') && 
+    (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.endsWith('.gif') || content.endsWith('.webp')));
+}
+
+function isGifMessage(content: string): boolean {
+  return content.includes('giphy.com') || content.includes('tenor.com');
 }
 
 interface Friend {
@@ -160,6 +165,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
 
   const handleSendVoice = (audioUrl: string) => sendMessage.mutate({ receiverId: partnerId, content: audioUrl });
   const handleSendImage = (imageUrl: string) => sendMessage.mutate({ receiverId: partnerId, content: imageUrl });
+  const handleSendGif = (gifUrl: string) => sendMessage.mutate({ receiverId: partnerId, content: gifUrl });
 
   return (
     <div className="flex flex-col h-full">
@@ -194,11 +200,14 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
               const isOwn = msg.sender_id === user?.id;
               const isVoice = isVoiceMessage(msg.content);
               const isImage = isImageMessage(msg.content);
+              const isGif = isGifMessage(msg.content);
               return (
                 <div key={msg.id} className={cn('flex', isOwn ? 'justify-end' : 'justify-start')}>
                   <div className={cn('max-w-[70%] rounded-2xl px-4 py-2', isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md')}>
                     {isVoice ? (
                       <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
+                    ) : isGif ? (
+                      <img src={msg.content} alt="GIF" className="rounded-lg max-w-full max-h-48 object-cover" />
                     ) : isImage ? (
                       <img src={msg.content} alt="Shared image" className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => window.open(msg.content, '_blank')} />
                     ) : (
@@ -226,6 +235,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
       <div className="p-4 border-t bg-card">
         <form onSubmit={handleSend} className="flex gap-2 items-center">
           <ChatImageUpload onImageSelected={handleSendImage} disabled={sendMessage.isPending} />
+          <GifPicker onGifSelected={handleSendGif} disabled={sendMessage.isPending} />
           <Input value={message} onChange={(e) => handleInputChange(e.target.value)} placeholder="Type a message..." className="flex-1" disabled={sendMessage.isPending} />
           <VoiceMessageRecorder onSend={handleSendVoice} disabled={sendMessage.isPending} />
           <Button type="submit" size="icon" disabled={!message.trim() || sendMessage.isPending}>
