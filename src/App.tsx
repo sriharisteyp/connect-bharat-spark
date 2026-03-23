@@ -93,6 +93,7 @@ const App = () => (
                 <Route path="/messages" element={<MessagesRoute />} />
                 <Route path="/messages/:partnerId" element={<ChatLayout><ChatPage /></ChatLayout>} />
                 <Route path="/reels" element={<MainLayout><ReelsPage /></MainLayout>} />
+                <Route path="/reels/:reelId" element={<MainLayout><ReelViewPage /></MainLayout>} />
                 <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
                 <Route path="/user/:username" element={<MainLayout><UserProfilePage /></MainLayout>} />
                 <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />
