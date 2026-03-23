@@ -161,6 +161,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
 
   const handleSendVoice = (audioUrl: string) => sendMessage.mutate({ receiverId: partnerId, content: audioUrl });
   const handleSendImage = (imageUrl: string) => sendMessage.mutate({ receiverId: partnerId, content: imageUrl });
+  const handleSendGif = (gifUrl: string) => sendMessage.mutate({ receiverId: partnerId, content: gifUrl });
 
   return (
     <div className="flex flex-col h-full">
