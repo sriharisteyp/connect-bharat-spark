@@ -63,21 +63,26 @@ function AddStoryButton() {
   const handleSubmit = async () => {
     if (!file) return;
 
+    // Close dialog immediately for instant feel
+    const captionValue = caption.trim();
+    const uploadFile = file;
+    setOpen(false);
+    setFile(null);
+    setPreview(null);
+    setCaption('');
+    toast.info('Uploading story...');
+
     try {
-      const mediaUrl = await uploadMedia.mutateAsync(file);
-      const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+      const mediaUrl = await uploadMedia.mutateAsync(uploadFile);
+      const mediaType = uploadFile.type.startsWith('video/') ? 'video' : 'image';
 
       await createStory.mutateAsync({
         mediaUrl,
         mediaType,
-        caption: caption.trim() || undefined,
+        caption: captionValue || undefined,
       });
 
       toast.success('Story posted!');
-      setOpen(false);
-      setFile(null);
-      setPreview(null);
-      setCaption('');
     } catch (error) {
       toast.error('Failed to post story');
     }
