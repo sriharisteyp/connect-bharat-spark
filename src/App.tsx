@@ -21,6 +21,7 @@ import UserProfilePage from "@/pages/UserProfile";
 import SettingsPage from "@/pages/Settings";
 import AboutPage from "@/pages/About";
 import ReelsPage from "@/pages/Reels";
+import ReelViewPage from "@/pages/ReelView";
 import NotFound from "@/pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
