@@ -85,16 +85,21 @@ export default function FeedPage() {
   const handlePost = async () => {
     if (!content.trim() && !selectedImage) return;
     
+    // Capture values and reset immediately for instant feel
+    const postContent = content.trim();
+    const postImage = selectedImage;
+    setContent('');
+    removeImage();
+    toast.info('Posting...');
+
     try {
       let imageUrl: string | undefined;
       
-      if (selectedImage) {
-        imageUrl = await uploadImage.mutateAsync(selectedImage);
+      if (postImage) {
+        imageUrl = await uploadImage.mutateAsync(postImage);
       }
       
-      await createPost.mutateAsync({ content: content.trim(), imageUrl });
-      setContent('');
-      removeImage();
+      await createPost.mutateAsync({ content: postContent, imageUrl });
       toast.success('Post created!');
     } catch (error) {
       toast.error('Failed to create post');
