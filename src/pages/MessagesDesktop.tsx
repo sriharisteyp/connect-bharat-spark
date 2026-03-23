@@ -200,11 +200,14 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
               const isOwn = msg.sender_id === user?.id;
               const isVoice = isVoiceMessage(msg.content);
               const isImage = isImageMessage(msg.content);
+              const isGif = isGifMessage(msg.content);
               return (
                 <div key={msg.id} className={cn('flex', isOwn ? 'justify-end' : 'justify-start')}>
                   <div className={cn('max-w-[70%] rounded-2xl px-4 py-2', isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md')}>
                     {isVoice ? (
                       <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
+                    ) : isGif ? (
+                      <img src={msg.content} alt="GIF" className="rounded-lg max-w-full max-h-48 object-cover" />
                     ) : isImage ? (
                       <img src={msg.content} alt="Shared image" className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => window.open(msg.content, '_blank')} />
                     ) : (
