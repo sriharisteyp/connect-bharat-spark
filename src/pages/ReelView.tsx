@@ -9,13 +9,13 @@ import { useFollowStatus, useFollowUser, useUnfollowUser } from '@/hooks/useFoll
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Heart, MessageCircle, Share2, Play, Pause, Volume2, VolumeX, UserPlus, UserCheck, Send, Loader2, ArrowLeft, Trash2, Copy, Check } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
+import { AuthPromptDialog } from '@/components/AuthPromptDialog';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { AuthPromptDialog } from '@/components/AuthPromptDialog';
 
