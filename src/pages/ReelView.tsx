@@ -16,8 +16,6 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
 import { AuthPromptDialog } from '@/components/AuthPromptDialog';
-import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog';
-import { AuthPromptDialog } from '@/components/AuthPromptDialog';
 
 function useReel(reelId: string) {
   const { user } = useAuth();
