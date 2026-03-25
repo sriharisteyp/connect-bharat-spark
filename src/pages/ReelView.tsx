@@ -152,142 +152,162 @@ export default function ReelViewPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-8">
-      <Button variant="ghost" className="gap-2 mb-4" onClick={() => navigate('/reels')}>
-        <ArrowLeft className="h-4 w-4" /> Back to Reels
-      </Button>
+    <div className="min-h-screen bg-background">
+      {/* Top bar */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-2 flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate('/reels')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <span className="font-semibold text-lg">Reel</span>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Media */}
-        <Card className="overflow-hidden">
-          <AspectRatio ratio={9/16} className="bg-black">
+      <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-0 lg:gap-6 p-0 lg:p-6">
+        {/* Video / Media - YT style large player */}
+        <div className="flex-1 bg-black lg:rounded-xl overflow-hidden">
+          <div className="relative w-full" style={{ maxHeight: '80vh' }}>
             {reel.media_type === 'video' ? (
-              <div className="relative w-full h-full">
+              <div className="relative w-full flex items-center justify-center" style={{ minHeight: '60vh', maxHeight: '80vh' }}>
                 <video
                   ref={videoRef}
                   src={reel.media_url}
                   className="w-full h-full object-contain"
+                  style={{ maxHeight: '80vh' }}
                   loop
                   playsInline
                   muted={isMuted}
                   poster={reel.thumbnail_url || undefined}
                   onClick={handlePlayPause}
+                  onDoubleClick={handleLike}
                 />
                 {!isPlaying && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 cursor-pointer" onClick={handlePlayPause}>
-                    <Play className="h-16 w-16 text-white" fill="white" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer" onClick={handlePlayPause}>
+                    <div className="h-20 w-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Play className="h-10 w-10 text-white ml-1" fill="white" />
+                    </div>
                   </div>
                 )}
-                <div className="absolute bottom-3 right-3 flex gap-2">
-                  <Button size="icon" variant="secondary" className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white" onClick={handlePlayPause}>
-                    {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                  <Button size="icon" variant="secondary" className="h-8 w-8 bg-black/50 hover:bg-black/70 text-white" onClick={() => setIsMuted(!isMuted)}>
-                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                  </Button>
+                {/* Bottom controls bar */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-white hover:bg-white/20" onClick={handlePlayPause}>
+                      {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                    </Button>
+                    <Button size="icon" variant="ghost" className="h-10 w-10 text-white hover:bg-white/20" onClick={() => setIsMuted(!isMuted)}>
+                      {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : (
-              <img src={reel.media_url} alt="Reel" className="w-full h-full object-contain" />
+              <div className="flex items-center justify-center" style={{ minHeight: '60vh', maxHeight: '80vh' }} onDoubleClick={handleLike}>
+                <img src={reel.media_url} alt="Reel" className="w-full h-full object-contain" style={{ maxHeight: '80vh' }} />
+              </div>
             )}
-          </AspectRatio>
-        </Card>
+          </div>
 
-        {/* Details & Comments */}
-        <div className="flex flex-col gap-4">
-          {/* User Info */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Link to={`/user/${reel.profile?.username}`}>
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={reel.profile?.avatar_url || ''} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">{reel.profile?.full_name?.[0]}</AvatarFallback>
-                  </Avatar>
-                </Link>
-                <div className="flex-1">
-                  <Link to={`/user/${reel.profile?.username}`} className="font-semibold hover:underline">
-                    {reel.profile?.full_name}
-                  </Link>
-                  <p className="text-sm text-muted-foreground">
-                    @{reel.profile?.username} · {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}
-                  </p>
-                </div>
-                {!isOwnReel && user && (
-                  <Button variant={isFollowing ? 'secondary' : 'default'} size="sm" onClick={handleFollow}>
-                    {isFollowing ? <><UserCheck className="h-4 w-4 mr-1" /> Following</> : <><UserPlus className="h-4 w-4 mr-1" /> Follow</>}
-                  </Button>
-                )}
-              </div>
-              {reel.caption && <p className="mt-3 text-sm">{reel.caption}</p>}
-
-              <div className="flex items-center gap-4 mt-4 pt-3 border-t">
-                <button onClick={handleLike} className={cn('flex items-center gap-2 text-sm', reel.is_liked ? 'text-accent' : 'text-muted-foreground hover:text-accent')}>
-                  <Heart className={cn('h-5 w-5', reel.is_liked && 'fill-current')} /> {reel.likes_count}
-                </button>
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <MessageCircle className="h-5 w-5" /> {reel.comments_count}
-                </span>
-                <button onClick={handleShare} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
-                  <Share2 className="h-5 w-5" /> Share
-                </button>
-                <button onClick={handleCopyLink} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary ml-auto">
-                  {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                  {copied ? 'Copied!' : 'Copy Link'}
-                </button>
-              </div>
-
+          {/* Below video - YT style info */}
+          <div className="bg-background p-4 lg:rounded-b-xl">
+            {reel.caption && <h1 className="text-lg font-semibold mb-3">{reel.caption}</h1>}
+            
+            {/* Action buttons row */}
+            <div className="flex items-center gap-2 flex-wrap mb-4">
+              <Button
+                variant={reel.is_liked ? 'default' : 'secondary'}
+                size="sm"
+                className="rounded-full gap-2"
+                onClick={handleLike}
+              >
+                <Heart className={cn('h-4 w-4', reel.is_liked && 'fill-current')} />
+                {reel.likes_count}
+              </Button>
+              <Button variant="secondary" size="sm" className="rounded-full gap-2" onClick={handleShare}>
+                <Share2 className="h-4 w-4" /> Share
+              </Button>
+              <Button variant="secondary" size="sm" className="rounded-full gap-2" onClick={handleCopyLink}>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? 'Copied!' : 'Copy'}
+              </Button>
               {isOwnReel && (
-                <div className="mt-3 pt-3 border-t">
-                  <DeleteConfirmDialog
-                    title="Delete Reel"
-                    description="Are you sure? This action cannot be undone."
-                    onConfirm={handleDelete}
-                    isPending={deleteReel.isPending}
-                    trigger={
-                      <Button variant="outline" size="sm" className="text-destructive gap-2">
-                        <Trash2 className="h-4 w-4" /> Delete Reel
-                      </Button>
-                    }
-                  />
-                </div>
+                <DeleteConfirmDialog
+                  title="Delete Reel"
+                  description="Are you sure? This action cannot be undone."
+                  onConfirm={handleDelete}
+                  isPending={deleteReel.isPending}
+                  trigger={
+                    <Button variant="secondary" size="sm" className="rounded-full gap-2 text-destructive">
+                      <Trash2 className="h-4 w-4" /> Delete
+                    </Button>
+                  }
+                />
               )}
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Comments */}
-          <Card className="flex-1">
-            <CardContent className="p-4 flex flex-col h-full">
-              <h3 className="font-semibold mb-3">Comments</h3>
-              <ScrollArea className="flex-1 max-h-64">
-                <div className="space-y-3">
-                  {comments.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">No comments yet</p>
-                  ) : comments.map(c => (
-                    <div key={c.id} className="flex gap-2">
-                      <Avatar className="h-7 w-7">
-                        <AvatarImage src={c.profile?.avatar_url || ''} />
-                        <AvatarFallback className="text-xs">{c.profile?.full_name?.[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <span className="text-sm font-medium">{c.profile?.username}</span>
-                        <span className="text-xs text-muted-foreground ml-2">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
-                        <p className="text-sm">{c.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-              {user && (
-                <form onSubmit={handleComment} className="flex gap-2 mt-3 pt-3 border-t">
-                  <Input value={commentText} onChange={e => setCommentText(e.target.value)} placeholder="Add a comment..." className="flex-1" />
-                  <Button type="submit" size="icon" disabled={!commentText.trim() || createComment.isPending}>
-                    {createComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                </form>
+            {/* Creator card */}
+            <div className="bg-muted/50 rounded-xl p-3 flex items-center gap-3">
+              <Link to={`/user/${reel.profile?.username}`}>
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={reel.profile?.avatar_url || ''} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">{reel.profile?.full_name?.[0]}</AvatarFallback>
+                </Avatar>
+              </Link>
+              <div className="flex-1 min-w-0">
+                <Link to={`/user/${reel.profile?.username}`} className="font-semibold text-sm hover:underline block truncate">
+                  {reel.profile?.full_name}
+                </Link>
+                <p className="text-xs text-muted-foreground">@{reel.profile?.username} · {formatDistanceToNow(new Date(reel.created_at), { addSuffix: true })}</p>
+              </div>
+              {!isOwnReel && user && (
+                <Button variant={isFollowing ? 'secondary' : 'default'} size="sm" className="rounded-full" onClick={handleFollow}>
+                  {isFollowing ? <><UserCheck className="h-4 w-4 mr-1" /> Following</> : <><UserPlus className="h-4 w-4 mr-1" /> Follow</>}
+                </Button>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Comments panel - YT style side panel on desktop */}
+        <div className="w-full lg:w-96 flex flex-col bg-background lg:border lg:rounded-xl overflow-hidden" style={{ maxHeight: '80vh' }}>
+          <div className="p-4 border-b flex items-center justify-between">
+            <h3 className="font-semibold">Comments <span className="text-muted-foreground font-normal text-sm">({reel.comments_count})</span></h3>
+          </div>
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {comments.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
+                  <p className="text-sm text-muted-foreground">No comments yet. Be the first!</p>
+                </div>
+              ) : comments.map(c => (
+                <div key={c.id} className="flex gap-3">
+                  <Link to={`/user/${c.profile?.username}`}>
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={c.profile?.avatar_url || ''} />
+                      <AvatarFallback className="text-xs">{c.profile?.full_name?.[0]}</AvatarFallback>
+                    </Avatar>
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <Link to={`/user/${c.profile?.username}`} className="text-sm font-semibold hover:underline">@{c.profile?.username}</Link>
+                      <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}</span>
+                    </div>
+                    <p className="text-sm mt-0.5">{c.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+          {user ? (
+            <form onSubmit={handleComment} className="p-3 border-t flex gap-2">
+              <Input value={commentText} onChange={e => setCommentText(e.target.value)} placeholder="Add a comment..." className="flex-1 rounded-full" />
+              <Button type="submit" size="icon" className="rounded-full" disabled={!commentText.trim() || createComment.isPending}>
+                {createComment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </form>
+          ) : (
+            <div className="p-3 border-t text-center">
+              <Button variant="link" onClick={() => setShowAuthPrompt(true)}>Sign in to comment</Button>
+            </div>
+          )}
         </div>
       </div>
 

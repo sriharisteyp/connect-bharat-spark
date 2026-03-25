@@ -174,16 +174,17 @@ export function useCreateGroupChat() {
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
       if (!user?.id) throw new Error('Not authenticated');
 
-      // Create the group
-      const { data: group, error } = await supabase
+      const groupId = crypto.randomUUID();
+
+      // Create the group (don't use .select() as SELECT RLS requires membership)
+      const { error } = await supabase
         .from('group_chats')
         .insert({
+          id: groupId,
           name,
           description: description || null,
           created_by: user.id,
-        })
-        .select()
-        .single();
+        });
 
       if (error) throw error;
 
@@ -191,14 +192,14 @@ export function useCreateGroupChat() {
       const { error: memberError } = await supabase
         .from('group_members')
         .insert({
-          group_id: group.id,
+          group_id: groupId,
           user_id: user.id,
           role: 'admin',
         });
 
       if (memberError) throw memberError;
 
-      return group;
+      return { id: groupId, name };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['group-chats'] });
