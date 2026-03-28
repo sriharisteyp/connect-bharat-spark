@@ -139,6 +139,14 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
   const isPartnerTyping = useTypingSubscription(partnerId);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const messageIds = (messages || []).map(m => m.id);
+  const { data: reactionsMap = {} } = useMessageReactions(messageIds, 'message_reactions');
+  const toggleReaction = useToggleReaction('message_reactions');
+
+  const handleReaction = (messageId: string, reaction: string) => {
+    toggleReaction.mutate({ messageId, reaction });
+  };
+
   const handleInputChange = useCallback((value: string) => {
     setMessage(value);
     setTyping(true);
@@ -197,7 +205,40 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
             </div>
           </div>
         ) : (
-          <ChatMessagesWithReactions messages={messages} userId={user?.id} />
+          <div className="space-y-3">
+            {messages.map((msg) => {
+              const isOwn = msg.sender_id === user?.id;
+              const isVoice = isVoiceMessage(msg.content);
+              const isImage = isImageMessage(msg.content);
+              const isGif = isGifMessage(msg.content);
+              const msgReactions = reactionsMap[msg.id] || [];
+              return (
+                <div key={msg.id} className={cn('flex group', isOwn ? 'justify-end' : 'justify-start')}>
+                  <div className="max-w-[70%]">
+                    <div className={cn('flex items-end gap-1', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+                      <div className={cn('rounded-2xl px-4 py-2', isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md')}>
+                        {isVoice ? (
+                          <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
+                        ) : isGif ? (
+                          <img src={msg.content} alt="GIF" className="rounded-lg max-w-full max-h-48 object-cover" />
+                        ) : isImage ? (
+                          <img src={msg.content} alt="Shared image" className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => window.open(msg.content, '_blank')} />
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                        )}
+                        <p className={cn('text-xs mt-1', isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                          {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <InlineReactionPicker messageId={msg.id} onToggleReaction={handleReaction} />
+                    </div>
+                    {msgReactions.length > 0 && (
+                      <MessageReactions messageId={msg.id} reactions={msgReactions} onToggleReaction={handleReaction} isOwn={isOwn} />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
             {isPartnerTyping && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
