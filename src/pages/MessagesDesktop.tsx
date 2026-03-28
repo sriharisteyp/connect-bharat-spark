@@ -19,6 +19,8 @@ import { TypingIndicator } from '@/components/TypingIndicator';
 import { useTypingIndicator, useTypingSubscription } from '@/hooks/usePresence';
 import { GroupChatPanel } from '@/components/GroupChatPanel';
 import { GifPicker } from '@/components/GifPicker';
+import { useMessageReactions, useToggleReaction } from '@/hooks/useMessageReactions';
+import { MessageReactions, InlineReactionPicker } from '@/components/MessageReactions';
 
 function isVoiceMessage(content: string): boolean {
   return content.includes('/storage/v1/object/public/posts/') && content.endsWith('.webm');
@@ -195,31 +197,7 @@ function ChatArea({ partnerId, partnerName, partnerAvatar }: { partnerId: string
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            {messages.map((msg) => {
-              const isOwn = msg.sender_id === user?.id;
-              const isVoice = isVoiceMessage(msg.content);
-              const isImage = isImageMessage(msg.content);
-              const isGif = isGifMessage(msg.content);
-              return (
-                <div key={msg.id} className={cn('flex', isOwn ? 'justify-end' : 'justify-start')}>
-                  <div className={cn('max-w-[70%] rounded-2xl px-4 py-2', isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md')}>
-                    {isVoice ? (
-                      <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
-                    ) : isGif ? (
-                      <img src={msg.content} alt="GIF" className="rounded-lg max-w-full max-h-48 object-cover" />
-                    ) : isImage ? (
-                      <img src={msg.content} alt="Shared image" className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => window.open(msg.content, '_blank')} />
-                    ) : (
-                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                    )}
-                    <p className={cn('text-xs mt-1', isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                      {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+          <ChatMessagesWithReactions messages={messages} userId={user?.id} />
             {isPartnerTyping && (
               <div className="flex justify-start">
                 <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
