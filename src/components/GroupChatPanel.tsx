@@ -16,6 +16,12 @@ import { Send, Loader2, Users, Settings, Hash, Plus, UserPlus, Crown, Trash2, Lo
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useMessageReactions, useToggleReaction } from '@/hooks/useMessageReactions';
+import { MessageReactions, InlineReactionPicker } from '@/components/MessageReactions';
+import { VoiceMessageRecorder } from '@/components/VoiceMessageRecorder';
+import { VoiceMessagePlayer } from '@/components/VoiceMessagePlayer';
+import { ChatImageUpload } from '@/components/ChatImageUpload';
+import { GifPicker } from '@/components/GifPicker';
 
 function CreateGroupDialog({ onCreated }: { onCreated?: (group: GroupChat) => void }) {
   const [open, setOpen] = useState(false);
@@ -263,12 +269,33 @@ function GroupSettings({ group, onLeave }: { group: GroupChat; onLeave: () => vo
   );
 }
 
+function isVoiceMessage(content: string): boolean {
+  return content.includes('/storage/v1/object/public/posts/') && content.endsWith('.webm');
+}
+
+function isImageMessage(content: string): boolean {
+  return (content.includes('/storage/v1/object/public/posts/') && 
+    (content.endsWith('.jpg') || content.endsWith('.jpeg') || content.endsWith('.png') || content.endsWith('.gif') || content.endsWith('.webp')));
+}
+
+function isGifMessage(content: string): boolean {
+  return content.includes('giphy.com') || content.includes('tenor.com');
+}
+
 function GroupChatMessages({ group, onLeave }: { group: GroupChat; onLeave: () => void }) {
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { data: messages, isLoading } = useGroupMessages(group.id);
   const sendMessage = useSendGroupMessage();
+
+  const messageIds = (messages || []).map(m => m.id);
+  const { data: reactionsMap = {} } = useMessageReactions(messageIds, 'group_message_reactions');
+  const toggleReaction = useToggleReaction('group_message_reactions');
+
+  const handleReaction = (messageId: string, reaction: string) => {
+    toggleReaction.mutate({ messageId, reaction });
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -282,6 +309,10 @@ function GroupChatMessages({ group, onLeave }: { group: GroupChat; onLeave: () =
       { onSuccess: () => setMessage('') }
     );
   };
+
+  const handleSendVoice = (audioUrl: string) => sendMessage.mutate({ groupId: group.id, content: audioUrl });
+  const handleSendImage = (imageUrl: string) => sendMessage.mutate({ groupId: group.id, content: imageUrl });
+  const handleSendGif = (gifUrl: string) => sendMessage.mutate({ groupId: group.id, content: gifUrl });
 
   return (
     <div className="flex flex-col h-full">
@@ -314,8 +345,12 @@ function GroupChatMessages({ group, onLeave }: { group: GroupChat; onLeave: () =
           <div className="space-y-3">
             {messages.map((msg) => {
               const isOwn = msg.sender_id === user?.id;
+              const isVoice = isVoiceMessage(msg.content);
+              const isImage = isImageMessage(msg.content);
+              const isGif = isGifMessage(msg.content);
+              const msgReactions = reactionsMap[msg.id] || [];
               return (
-                <div key={msg.id} className={cn('flex', isOwn ? 'justify-end' : 'justify-start')}>
+                <div key={msg.id} className={cn('flex group', isOwn ? 'justify-end' : 'justify-start')}>
                   <div className="flex gap-2 max-w-[70%]">
                     {!isOwn && (
                       <Avatar className="h-7 w-7 mt-1 flex-shrink-0">
@@ -331,15 +366,29 @@ function GroupChatMessages({ group, onLeave }: { group: GroupChat; onLeave: () =
                           {msg.sender?.full_name || 'Unknown'}
                         </p>
                       )}
-                      <div className={cn(
-                        'rounded-2xl px-4 py-2',
-                        isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md'
-                      )}>
-                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                        <p className={cn('text-xs mt-1', isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                          {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
-                        </p>
+                      <div className={cn('flex items-end gap-1', isOwn ? 'flex-row-reverse' : 'flex-row')}>
+                        <div className={cn(
+                          'rounded-2xl px-4 py-2',
+                          isOwn ? 'bg-primary text-primary-foreground rounded-br-md' : 'bg-muted rounded-bl-md'
+                        )}>
+                          {isVoice ? (
+                            <VoiceMessagePlayer audioUrl={msg.content} isOwn={isOwn} />
+                          ) : isGif ? (
+                            <img src={msg.content} alt="GIF" className="rounded-lg max-w-full max-h-48 object-cover" />
+                          ) : isImage ? (
+                            <img src={msg.content} alt="Shared image" className="rounded-lg max-w-full max-h-64 object-cover cursor-pointer" onClick={() => window.open(msg.content, '_blank')} />
+                          ) : (
+                            <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                          )}
+                          <p className={cn('text-xs mt-1', isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                            {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <InlineReactionPicker messageId={msg.id} onToggleReaction={handleReaction} />
                       </div>
+                      {msgReactions.length > 0 && (
+                        <MessageReactions messageId={msg.id} reactions={msgReactions} onToggleReaction={handleReaction} isOwn={isOwn} />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -351,7 +400,9 @@ function GroupChatMessages({ group, onLeave }: { group: GroupChat; onLeave: () =
       </ScrollArea>
 
       <div className="p-4 border-t bg-card">
-        <form onSubmit={handleSend} className="flex gap-2">
+        <form onSubmit={handleSend} className="flex gap-2 items-center">
+          <ChatImageUpload onImageSelected={handleSendImage} disabled={sendMessage.isPending} />
+          <GifPicker onGifSelected={handleSendGif} disabled={sendMessage.isPending} />
           <Input
             value={message}
             onChange={e => setMessage(e.target.value)}
@@ -359,6 +410,7 @@ function GroupChatMessages({ group, onLeave }: { group: GroupChat; onLeave: () =
             className="flex-1"
             disabled={sendMessage.isPending}
           />
+          <VoiceMessageRecorder onSend={handleSendVoice} disabled={sendMessage.isPending} />
           <Button type="submit" size="icon" disabled={!message.trim() || sendMessage.isPending}>
             {sendMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
